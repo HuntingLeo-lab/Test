@@ -39,29 +39,15 @@
       }
     }
 
-    try {
-      if (localStorage.getItem('theme') === 'light' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: light)').matches)) {
-        document.documentElement.classList.remove('dark');
-        document.getElementById('meta-theme-color')?.setAttribute('content', '#f9fafb');
-      } else {
-        document.documentElement.classList.add('dark');
-      }
-    } catch(e) {
+    if (localStorage.getItem('theme') === 'light' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: light)').matches)) {
+      document.documentElement.classList.remove('dark');
+      document.getElementById('meta-theme-color')?.setAttribute('content', '#f9fafb');
+    } else {
       document.documentElement.classList.add('dark');
     }
   </script>
   
   <style>
-    /* Basic CSS Ad-Hiding (Cosmetic Only) */
-    /* This will only hide elements on YOUR domain, not inside the iframes */
-    .ad-container, .advertisement, [id^="ad-"], [class*="ad-"], iframe[src*="doubleclick"] {
-        display: none !important;
-        width: 0 !important;
-        height: 0 !important;
-        position: absolute !important;
-        left: -9999px !important;
-    }
-
     .no-scrollbar::-webkit-scrollbar { display: none; }
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     
@@ -303,10 +289,6 @@
             <span id="current-server-name" class="font-bold text-gray-800 dark:text-zinc-200 text-xs sm:text-sm">Server: VidSrc</span>
           </div>
           <div class="flex items-center gap-2">
-            <!-- New Popup Blocker Toggle -->
-            <button id="modal-adblock-btn" onclick="toggleAdBlocker()" class="bg-emerald-100 dark:bg-emerald-900/30 hover:bg-emerald-200 text-emerald-700 dark:text-emerald-400 px-3 py-1.5 rounded-lg border border-emerald-300 dark:border-emerald-800 text-xs font-bold flex items-center gap-1.5 transition-all active:scale-95" title="Blocks annoying popups and redirects">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.956 11.956 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg> <span id="modal-adblock-text" class="hidden sm:inline">Popups Blocked</span>
-            </button>
             <!-- New Dedicated Fullscreen Button -->
             <button onclick="toggleFullscreen()" class="bg-gray-100 dark:bg-zinc-800 hover:bg-gray-200 text-gray-700 dark:text-zinc-300 px-3 py-1.5 rounded-lg border border-gray-300 dark:border-zinc-700 text-xs font-bold flex items-center gap-1.5 transition-all active:scale-95">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path></svg> <span class="hidden sm:inline">Fullscreen</span>
@@ -325,18 +307,8 @@
           <span class="text-sm text-gray-400 font-bold tracking-wider uppercase pulse-glow">Connecting...</span>
         </div>
         
-        <iframe 
-            id="video-frame" 
-            src="" 
-            class="w-full h-full border-none relative z-10 bg-black" 
-            allowfullscreen="true" 
-            webkitallowfullscreen="true" 
-            mozallowfullscreen="true" 
-            oallowfullscreen="true" 
-            msallowfullscreen="true" 
-            allow="autoplay; encrypted-media; fullscreen" 
-            onload="document.getElementById('iframe-loader').style.display='none'">
-        </iframe>
+        <!-- Expanded iframe permissions to force-allow absolute fullscreen natively inside the iframe -->
+        <iframe id="video-frame" src="" class="w-full h-full border-none relative z-10 bg-black" allowfullscreen="true" webkitallowfullscreen="true" mozallowfullscreen="true" oallowfullscreen="true" msallowfullscreen="true" allow="autoplay; encrypted-media; fullscreen" onload="document.getElementById('iframe-loader').style.display='none'"></iframe>
       </div>
 
       <div class="shrink-0 max-h-[30vh] overflow-y-auto custom-scroll p-4 sm:p-6 lg:p-8 bg-gray-50 dark:bg-zinc-950 relative">
@@ -429,35 +401,24 @@
         { name: 'VidSrc XYZ', getMovie: (id) => `https://vidsrc.xyz/embed/movie?tmdb=${id}`, getTv: (id, s, e) => `https://vidsrc.xyz/embed/tv?tmdb=${id}&season=${s}&episode=${e}`, host: 'vidsrc.xyz' }
     ];
 
-    let currentTheme = 'dark';
+    let currentTheme = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
     let currentMediaType = 'all';
     let searchTimeout = null;
     let currentModalItem = null;
     let currentServerIndex = 0;
     let currentSeason = 1;
     let currentEpisode = 1;
-    let popupBlockerEnabled = true;
 
-    let watchlist = [];
-    let favorites = [];
-    let lastWatched = null;
-
-    try {
-        currentTheme = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-        popupBlockerEnabled = localStorage.getItem('streamflix_adblock') !== 'false';
-        watchlist = JSON.parse(localStorage.getItem('streamflix_watchlist')) || [];
-        favorites = JSON.parse(localStorage.getItem('streamflix_favorites')) || [];
-        lastWatched = JSON.parse(localStorage.getItem('streamflix_last_watched')) || null;
-    } catch(e) {
-        console.warn("Sandbox restricted localStorage access.");
-    }
-
+    let watchlist = JSON.parse(localStorage.getItem('streamflix_watchlist')) || [];
+    let favorites = JSON.parse(localStorage.getItem('streamflix_favorites')) || [];
     let activeTab = 'watchlist';
+
+    /* Note: Precise iframe timestamps cannot be retrieved due to browser CORS policies blocking cross-origin frame contents. We save the exact server, episode, and series instead. */
+    let lastWatched = JSON.parse(localStorage.getItem('streamflix_last_watched')) || null;
 
     document.addEventListener('DOMContentLoaded', () => {
       init();
       updateThemeUI();
-      updateAdBlockUI();
       adjustMainPadding();
       window.addEventListener('resize', adjustMainPadding);
       window.addEventListener('orientationchange', () => setTimeout(adjustMainPadding, 100));
@@ -514,17 +475,22 @@
         }
     }
 
-    function showLoader() { document.getElementById('loading-indicator').classList.remove('hidden'); }
-    function hideLoader() { document.getElementById('loading-indicator').classList.add('hidden'); }
+    function showLoader() {
+        document.getElementById('loading-indicator').classList.remove('hidden');
+    }
+
+    function hideLoader() {
+        document.getElementById('loading-indicator').classList.add('hidden');
+    }
 
     window.toggleTheme = function toggleTheme() {
       if (document.documentElement.classList.contains('dark')) {
         document.documentElement.classList.remove('dark');
-        try { localStorage.setItem('theme', 'light'); } catch(e) {}
+        localStorage.setItem('theme', 'light');
         document.getElementById('meta-theme-color')?.setAttribute('content', '#f9fafb');
       } else {
         document.documentElement.classList.add('dark');
-        try { localStorage.setItem('theme', 'dark'); } catch(e) {}
+        localStorage.setItem('theme', 'dark');
         document.getElementById('meta-theme-color')?.setAttribute('content', '#09090b');
       }
       updateThemeUI();
@@ -565,7 +531,7 @@
         }
       });
       
-      adjustMainPadding();
+      adjustMainPadding(); // Re-adjust padding in case filters wrap differently
       
       if(document.getElementById('home-section').classList.contains('hidden') === false) {
           const allBtn = document.querySelector('.genre-pill');
@@ -574,6 +540,7 @@
     };
 
     function renderHero(item) {
+        // FIXED MEDIA ISSUE: Safely falls back directly to object structure if explicit media_type is omitted by the API
         const type = item.media_type || (item.name ? 'tv' : 'movie');
         const title = item.title || item.name;
         const bgImg = `${IMG_ORIGINAL}${item.backdrop_path}`;
@@ -806,9 +773,13 @@
         try {
             const urlObj = new URL(url);
             const hostname = urlObj.hostname;
+            
             const response = await fetch(`https://dns.google/resolve?name=${hostname}&type=A`);
             const data = await response.json();
-            if (data.Status === 0 && data.Answer && data.Answer.length > 0) return true; 
+            
+            if (data.Status === 0 && data.Answer && data.Answer.length > 0) {
+                return true; 
+            }
             return false;
         } catch (error) {
             console.warn("Failed to verify server status, assuming it might be down:", error);
@@ -820,7 +791,9 @@
         const toast = document.getElementById('server-error-toast');
         document.getElementById('server-error-message').textContent = message;
         toast.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-4');
-        setTimeout(() => toast.classList.add('opacity-0', 'pointer-events-none', 'translate-y-4'), 3000);
+        setTimeout(() => {
+            toast.classList.add('opacity-0', 'pointer-events-none', 'translate-y-4');
+        }, 3000);
     }
 
     async function setVideoSource() {
@@ -845,6 +818,7 @@
                 url = server.getTv(currentModalItem.id, currentSeason, currentEpisode);
             }
 
+            // Check if the domain is reachable before trying to load it
             const isReachable = await checkServerStatus(url);
 
             if (isReachable) {
@@ -863,19 +837,13 @@
                     episode: currentEpisode,
                     timestamp: Date.now()
                 };
-                try { localStorage.setItem('streamflix_last_watched', JSON.stringify(lastWatched)); } catch(e) {}
+                localStorage.setItem('streamflix_last_watched', JSON.stringify(lastWatched));
                 renderContinueBar();
                 
-                const iframe = document.getElementById('video-frame');
-                if (popupBlockerEnabled) {
-                    // Applies strict sandboxing to block window.open() and redirects
-                    iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-presentation');
-                } else {
-                    // Removes sandbox if the video server refuses to play with restrictions
-                    iframe.removeAttribute('sandbox');
-                }
-                
-                setTimeout(() => iframe.src = url, 300);
+                // Add a small delay to ensure loader is visible before setting src
+                setTimeout(() => {
+                    document.getElementById('video-frame').src = url;
+                }, 300);
             } else {
                 console.log(`Server ${server.name} appears to be unreachable. Skipping...`);
                 showToast(`${server.name} is currently unreachable. Switching server...`);
@@ -918,32 +886,6 @@
             }
         }
     };
-
-    window.toggleAdBlocker = function() {
-        popupBlockerEnabled = !popupBlockerEnabled;
-        try { localStorage.setItem('streamflix_adblock', popupBlockerEnabled); } catch(e) {}
-        updateAdBlockUI();
-        
-        // Reload stream with new sandbox settings
-        if (document.getElementById('player-modal').classList.contains('modal-active')) {
-            showToast(popupBlockerEnabled ? 'Strict mode enabled. Reloading stream...' : 'Restrictions lifted. Reloading stream...');
-            setVideoSource();
-        }
-    };
-
-    function updateAdBlockUI() {
-        const btn = document.getElementById('modal-adblock-btn');
-        const text = document.getElementById('modal-adblock-text');
-        if (!btn || !text) return;
-
-        if (popupBlockerEnabled) {
-            btn.className = "bg-emerald-100 dark:bg-emerald-900/30 hover:bg-emerald-200 text-emerald-700 dark:text-emerald-400 px-3 py-1.5 rounded-lg border border-emerald-300 dark:border-emerald-800 text-xs font-bold flex items-center gap-1.5 transition-all active:scale-95";
-            text.textContent = "Popups Blocked";
-        } else {
-            btn.className = "bg-amber-100 dark:bg-amber-900/30 hover:bg-amber-200 text-amber-700 dark:text-amber-400 px-3 py-1.5 rounded-lg border border-amber-300 dark:border-amber-800 text-xs font-bold flex items-center gap-1.5 transition-all active:scale-95";
-            text.textContent = "Popups Allowed";
-        }
-    }
 
     window.reloadStream = function reloadStream() {
         const iframe = document.getElementById('video-frame');
@@ -1073,7 +1015,7 @@
         if(existingIndex >= 0) { list.splice(existingIndex, 1); } 
         else { list.unshift(itemData); }
 
-        try { localStorage.setItem(`streamflix_${listType}`, JSON.stringify(list)); } catch(e) {}
+        localStorage.setItem(`streamflix_${listType}`, JSON.stringify(list));
         updateModalButtonsUI();
         
         if(!document.getElementById('lists-section').classList.contains('hidden') && activeTab === listType) {
@@ -1090,6 +1032,7 @@
         document.getElementById('btn-icon-favorite').textContent = inFavs ? '❤️' : '🤍';
     }
 
+    // Custom confirm dialog logic to avoid using native confirm()
     window.requestClearList = function requestClearList() {
         const modal = document.getElementById('confirm-modal');
         const content = document.getElementById('confirm-modal-content');
@@ -1107,10 +1050,10 @@
     window.executeClearList = function executeClearList() {
         if(activeTab === 'watchlist') {
             watchlist = [];
-            try { localStorage.setItem('streamflix_watchlist', '[]'); } catch(e) {}
+            localStorage.setItem('streamflix_watchlist', '[]');
         } else {
             favorites = [];
-            try { localStorage.setItem('streamflix_favorites', '[]'); } catch(e) {}
+            localStorage.setItem('streamflix_favorites', '[]');
         }
         switchListTab(activeTab);
         closeConfirmModal();
@@ -1164,7 +1107,7 @@
     window.clearContinueWatching = function(e) {
         if(e) e.stopPropagation();
         lastWatched = null;
-        try { localStorage.removeItem('streamflix_last_watched'); } catch(e) {}
+        localStorage.removeItem('streamflix_last_watched');
         renderContinueBar();
     };
 
