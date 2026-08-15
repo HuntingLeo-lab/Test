@@ -513,9 +513,9 @@
       document.body.style.overflow = 'hidden';
 
       const iframeLoader = document.getElementById('iframe-loader');
-      const videoFrame = document.getElementById('video-frame');
+      const launcher = document.getElementById('play-launcher');
       if (iframeLoader) iframeLoader.style.display = 'flex';
-      if (videoFrame) videoFrame.src = '';
+      if (launcher) launcher.style.display = 'none';
 
       const details = await fetchAPI(`/${type}/${id}`);
       if(!details) return;
@@ -572,8 +572,8 @@
         modal.classList.remove('modal-active');
       }
       document.body.style.overflow = '';
-      const videoFrame = document.getElementById('video-frame');
-      if (videoFrame) videoFrame.src = '';
+      const playBtn = document.getElementById('external-play-btn');
+      if (playBtn) playBtn.href = '#';
       currentModalItem = null;
     };
 
@@ -607,16 +607,19 @@
 
         const loader = document.getElementById('iframe-loader');
         const loaderSpan = document.querySelector('#iframe-loader span');
-        const videoFrame = document.getElementById('video-frame');
+        const launcher = document.getElementById('play-launcher');
+        const playBtn = document.getElementById('external-play-btn');
+        const launcherServerName = document.getElementById('launcher-server-name');
         const serverNameEl = document.getElementById('current-server-name');
 
         if (loader) loader.style.display = 'flex';
+        if (launcher) launcher.style.display = 'none';
         if (loaderSpan) loaderSpan.textContent = 'Finding reliable server...';
-        if (videoFrame) videoFrame.src = '';
 
         let serverFound = false;
         let attempts = 0;
         const maxAttempts = SERVERS.length;
+        let finalUrl = '';
 
         while (!serverFound && attempts < maxAttempts) {
             const server = SERVERS[currentServerIndex];
@@ -634,7 +637,9 @@
 
             if (isReachable) {
                 serverFound = true;
+                finalUrl = url;
                 if (serverNameEl) serverNameEl.textContent = server.name;
+                if (launcherServerName) launcherServerName.textContent = server.name;
                 if (loaderSpan) loaderSpan.textContent = 'Connecting...';
 
                 const newItem = {
@@ -656,9 +661,14 @@
                 localStorage.setItem('streamflix_continue_watching', JSON.stringify(continueList));
                 renderContinueBar();
 
-                setTimeout(() => {
-                    if (videoFrame) videoFrame.src = url;
-                }, 300);
+                if (loader) loader.style.display = 'none';
+                if (launcher) {
+                    launcher.style.display = 'flex';
+                    if (currentModalItem.details && currentModalItem.details.backdrop_path) {
+                       launcher.style.backgroundImage = `linear-gradient(to top, rgba(9, 9, 11, 1), rgba(9, 9, 11, 0.7)), url('${IMG_W500}${currentModalItem.details.backdrop_path}')`;
+                    }
+                }
+                if (playBtn) playBtn.href = finalUrl;
             } else {
                 showToast(`${server.name} is currently unreachable. Switching server...`);
                 currentServerIndex = (currentServerIndex + 1) % SERVERS.length;
@@ -680,9 +690,9 @@
     }
 
     window.openExternalMedia = function() {
-        const iframe = document.getElementById('video-frame');
-        const currentUrl = iframe ? iframe.src : '';
-        if (!currentUrl) {
+        const playBtn = document.getElementById('external-play-btn');
+        const currentUrl = playBtn ? playBtn.href : '';
+        if (!currentUrl || currentUrl === '#' || currentUrl.includes(window.location.host)) {
             showToast("No active media to open.");
             return;
         }
@@ -725,10 +735,7 @@
     };
 
     window.reloadStream = function reloadStream() {
-        const iframe = document.getElementById('video-frame');
-        const loader = document.getElementById('iframe-loader');
-        if (loader) loader.style.display = 'flex';
-        if (iframe) iframe.src = iframe.src;
+        setVideoSource();
     };
 
     window.nextServer = function nextServer() {
@@ -1143,16 +1150,29 @@
             </div>
 
             <!-- Iframe & Loading Viewport -->
-            <div class="relative w-full aspect-video bg-black">
-                <div id="iframe-loader" class="absolute inset-0 z-10 bg-zinc-950 flex flex-col items-center justify-center gap-3">
-                    <div class="w-10 h-10 border-4 border-fuchsia-600 border-t-transparent rounded-full animate-spin"></div>
-                    <span class="text-xs font-bold text-zinc-400 pulse-glow">Finding reliable server...</span>
-                </div>
-                <!-- SANDBOX SECURITY: Blocks popups (no allow-popups) and top navigation (no allow-top-navigation) to enforce user safety! -->
-                <iframe id="video-frame" class="w-full h-full border-0" allowfullscreen allow="autoplay; encrypted-media" sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"></iframe>
+        <div class="relative w-full aspect-video bg-zinc-950 flex flex-col items-center justify-center overflow-hidden">
+            <div id="iframe-loader" class="absolute inset-0 z-10 bg-zinc-950 flex flex-col items-center justify-center gap-3">
+                <div class="w-10 h-10 border-4 border-fuchsia-600 border-t-transparent rounded-full animate-spin"></div>
+                <span class="text-xs font-bold text-zinc-400 pulse-glow">Finding reliable server...</span>
             </div>
+            
+            <!-- Play Launcher (Replaces Iframe) -->
+            <div id="play-launcher" class="hidden absolute inset-0 z-20 flex-col items-center justify-center gap-4 bg-zinc-900 bg-cover bg-center">
+                 <div class="p-6 rounded-2xl glass-panel border border-zinc-700/50 flex flex-col items-center text-center max-w-sm w-full mx-4 shadow-2xl animate-in">
+                     <div class="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-gradient-to-r from-violet-600 to-fuchsia-600 flex items-center justify-center shadow-[0_0_20px_rgba(192,38,211,0.4)] mb-3 sm:mb-4">
+                         <svg class="w-6 h-6 sm:w-8 sm:h-8 text-white ml-1" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                     </div>
+                     <h2 class="text-white text-lg sm:text-xl font-black mb-1 sm:mb-2">Ready to Watch</h2>
+                     <p class="text-zinc-400 text-[10px] sm:text-xs mb-4 sm:mb-6 leading-relaxed">The video will safely open in a new tab. This bypasses browser iframe restrictions and provides a better viewing experience.</p>
+                     <a id="external-play-btn" href="#" target="_blank" class="w-full py-3 sm:py-3.5 bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 text-white font-bold rounded-xl flex items-center justify-center gap-2 shadow-lg transition-transform active:scale-95 text-xs sm:text-sm">
+                         Open Video Player
+                     </a>
+                     <p class="text-zinc-500 text-[9px] sm:text-[10px] uppercase tracking-wider font-bold mt-3 sm:mt-4">Selected Server: <span id="launcher-server-name" class="text-fuchsia-400"></span></p>
+                 </div>
+            </div>
+        </div>
 
-            <!-- Bottom Information & TV Controls -->
+        <!-- Bottom Information & TV Controls -->
             <div class="p-4 bg-zinc-900 overflow-y-auto max-h-[30vh] sm:max-h-[35vh] space-y-4">
                 
                 <div class="flex items-start justify-between gap-4">
