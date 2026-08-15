@@ -303,6 +303,10 @@
             <span id="current-server-name" class="font-bold text-gray-800 dark:text-zinc-200 text-xs sm:text-sm">Server: VidSrc</span>
           </div>
           <div class="flex items-center gap-2">
+            <!-- New Popup Blocker Toggle -->
+            <button id="modal-adblock-btn" onclick="toggleAdBlocker()" class="bg-emerald-100 dark:bg-emerald-900/30 hover:bg-emerald-200 text-emerald-700 dark:text-emerald-400 px-3 py-1.5 rounded-lg border border-emerald-300 dark:border-emerald-800 text-xs font-bold flex items-center gap-1.5 transition-all active:scale-95" title="Blocks annoying popups and redirects">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.956 11.956 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg> <span id="modal-adblock-text" class="hidden sm:inline">Popups Blocked</span>
+            </button>
             <!-- New Dedicated Fullscreen Button -->
             <button onclick="toggleFullscreen()" class="bg-gray-100 dark:bg-zinc-800 hover:bg-gray-200 text-gray-700 dark:text-zinc-300 px-3 py-1.5 rounded-lg border border-gray-300 dark:border-zinc-700 text-xs font-bold flex items-center gap-1.5 transition-all active:scale-95">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path></svg> <span class="hidden sm:inline">Fullscreen</span>
@@ -432,6 +436,7 @@
     let currentServerIndex = 0;
     let currentSeason = 1;
     let currentEpisode = 1;
+    let popupBlockerEnabled = true;
 
     let watchlist = [];
     let favorites = [];
@@ -439,6 +444,7 @@
 
     try {
         currentTheme = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        popupBlockerEnabled = localStorage.getItem('streamflix_adblock') !== 'false';
         watchlist = JSON.parse(localStorage.getItem('streamflix_watchlist')) || [];
         favorites = JSON.parse(localStorage.getItem('streamflix_favorites')) || [];
         lastWatched = JSON.parse(localStorage.getItem('streamflix_last_watched')) || null;
@@ -451,6 +457,7 @@
     document.addEventListener('DOMContentLoaded', () => {
       init();
       updateThemeUI();
+      updateAdBlockUI();
       adjustMainPadding();
       window.addEventListener('resize', adjustMainPadding);
       window.addEventListener('orientationchange', () => setTimeout(adjustMainPadding, 100));
@@ -859,7 +866,16 @@
                 try { localStorage.setItem('streamflix_last_watched', JSON.stringify(lastWatched)); } catch(e) {}
                 renderContinueBar();
                 
-                setTimeout(() => document.getElementById('video-frame').src = url, 300);
+                const iframe = document.getElementById('video-frame');
+                if (popupBlockerEnabled) {
+                    // Applies strict sandboxing to block window.open() and redirects
+                    iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-presentation');
+                } else {
+                    // Removes sandbox if the video server refuses to play with restrictions
+                    iframe.removeAttribute('sandbox');
+                }
+                
+                setTimeout(() => iframe.src = url, 300);
             } else {
                 console.log(`Server ${server.name} appears to be unreachable. Skipping...`);
                 showToast(`${server.name} is currently unreachable. Switching server...`);
@@ -902,6 +918,32 @@
             }
         }
     };
+
+    window.toggleAdBlocker = function() {
+        popupBlockerEnabled = !popupBlockerEnabled;
+        try { localStorage.setItem('streamflix_adblock', popupBlockerEnabled); } catch(e) {}
+        updateAdBlockUI();
+        
+        // Reload stream with new sandbox settings
+        if (document.getElementById('player-modal').classList.contains('modal-active')) {
+            showToast(popupBlockerEnabled ? 'Strict mode enabled. Reloading stream...' : 'Restrictions lifted. Reloading stream...');
+            setVideoSource();
+        }
+    };
+
+    function updateAdBlockUI() {
+        const btn = document.getElementById('modal-adblock-btn');
+        const text = document.getElementById('modal-adblock-text');
+        if (!btn || !text) return;
+
+        if (popupBlockerEnabled) {
+            btn.className = "bg-emerald-100 dark:bg-emerald-900/30 hover:bg-emerald-200 text-emerald-700 dark:text-emerald-400 px-3 py-1.5 rounded-lg border border-emerald-300 dark:border-emerald-800 text-xs font-bold flex items-center gap-1.5 transition-all active:scale-95";
+            text.textContent = "Popups Blocked";
+        } else {
+            btn.className = "bg-amber-100 dark:bg-amber-900/30 hover:bg-amber-200 text-amber-700 dark:text-amber-400 px-3 py-1.5 rounded-lg border border-amber-300 dark:border-amber-800 text-xs font-bold flex items-center gap-1.5 transition-all active:scale-95";
+            text.textContent = "Popups Allowed";
+        }
+    }
 
     window.reloadStream = function reloadStream() {
         const iframe = document.getElementById('video-frame');
