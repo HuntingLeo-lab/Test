@@ -48,6 +48,16 @@
   </script>
   
   <style>
+    /* Basic CSS Ad-Hiding (Cosmetic Only) */
+    /* This will only hide elements on YOUR domain, not inside the iframes */
+    .ad-container, .advertisement, [id^="ad-"], [class*="ad-"], iframe[src*="doubleclick"] {
+        display: none !important;
+        width: 0 !important;
+        height: 0 !important;
+        position: absolute !important;
+        left: -9999px !important;
+    }
+
     .no-scrollbar::-webkit-scrollbar { display: none; }
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     
@@ -130,6 +140,54 @@
     #player-wrapper:-webkit-full-screen { max-height: 100vh !important; border: none !important; border-radius: 0 !important; }
     #player-wrapper:-moz-full-screen { max-height: 100vh !important; border: none !important; border-radius: 0 !important; }
   </style>
+
+  <script>
+    // Very Basic JS Ad-Blocker (Domain Blocking)
+    // This intercepts fetch/XHR requests made from YOUR domain.
+    // It WILL NOT intercept requests made inside the video iframes.
+    const adDomains = [
+        "doubleclick.net", "adservice.google.com", "googlesyndication.com",
+        "adnxs.com", "advertising.com", "amazon-adsystem.com",
+        "criteo.com", "rubiconproject.com", "taboola.com", "outbrain.com",
+        "ads.twitter.com", "pixel.facebook.com"
+        // Add more known ad domains here
+    ];
+
+    const isAdRequest = (url) => {
+        try {
+            const urlObj = new URL(url, window.location.href);
+            return adDomains.some(domain => urlObj.hostname.includes(domain));
+        } catch (e) {
+            return false;
+        }
+    };
+
+    // Intercept Fetch API
+    const originalFetch = window.fetch;
+    window.fetch = async function(...args) {
+        if (isAdRequest(args[0])) {
+            console.log("Blocked ad request (fetch):", args[0]);
+            return new Response(null, { status: 204 }); // Return empty response
+        }
+        return originalFetch.apply(this, args);
+    };
+
+    // Intercept XMLHttpRequest
+    const originalXhrOpen = XMLHttpRequest.prototype.open;
+    XMLHttpRequest.prototype.open = function(method, url, ...rest) {
+        if (isAdRequest(url)) {
+            console.log("Blocked ad request (XHR):", url);
+            // Prevent the request from actually sending
+            this.send = () => {}; 
+            // Fake a successful empty response
+            Object.defineProperty(this, 'status', { get: () => 204 });
+            Object.defineProperty(this, 'readyState', { get: () => 4 });
+            if (this.onload) setTimeout(this.onload.bind(this), 0);
+            return;
+        }
+        originalXhrOpen.call(this, method, url, ...rest);
+    };
+  </script>
 </head>
 
 <body class="min-h-screen bg-gray-50 dark:bg-zinc-950 text-gray-900 dark:text-zinc-100 flex flex-col selection:bg-red-600 selection:text-white antialiased">
@@ -307,8 +365,27 @@
           <span class="text-sm text-gray-400 font-bold tracking-wider uppercase pulse-glow">Connecting...</span>
         </div>
         
-        <!-- Expanded iframe permissions to force-allow absolute fullscreen natively inside the iframe -->
-        <iframe id="video-frame" src="" class="w-full h-full border-none relative z-10 bg-black" allowfullscreen="true" webkitallowfullscreen="true" mozallowfullscreen="true" oallowfullscreen="true" msallowfullscreen="true" allow="autoplay; encrypted-media; fullscreen" onload="document.getElementById('iframe-loader').style.display='none'"></iframe>
+        <!-- 
+             Added sandbox attribute. 
+             This restricts the iframe's capabilities. 
+             It allows scripts and same-origin access (required by video players), 
+             but prevents top-level navigation (popups redirecting your site) 
+             and other potentially malicious actions by ads.
+             Note: Some players might break if they rely on popups or top-navigation.
+        -->
+        <iframe 
+            id="video-frame" 
+            src="" 
+            class="w-full h-full border-none relative z-10 bg-black" 
+            allowfullscreen="true" 
+            webkitallowfullscreen="true" 
+            mozallowfullscreen="true" 
+            oallowfullscreen="true" 
+            msallowfullscreen="true" 
+            allow="autoplay; encrypted-media; fullscreen" 
+            sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"
+            onload="document.getElementById('iframe-loader').style.display='none'">
+        </iframe>
       </div>
 
       <div class="shrink-0 max-h-[30vh] overflow-y-auto custom-scroll p-4 sm:p-6 lg:p-8 bg-gray-50 dark:bg-zinc-950 relative">
@@ -413,7 +490,6 @@
     let favorites = JSON.parse(localStorage.getItem('streamflix_favorites')) || [];
     let activeTab = 'watchlist';
 
-    /* Note: Precise iframe timestamps cannot be retrieved due to browser CORS policies blocking cross-origin frame contents. We save the exact server, episode, and series instead. */
     let lastWatched = JSON.parse(localStorage.getItem('streamflix_last_watched')) || null;
 
     document.addEventListener('DOMContentLoaded', () => {
@@ -475,13 +551,8 @@
         }
     }
 
-    function showLoader() {
-        document.getElementById('loading-indicator').classList.remove('hidden');
-    }
-
-    function hideLoader() {
-        document.getElementById('loading-indicator').classList.add('hidden');
-    }
+    function showLoader() { document.getElementById('loading-indicator').classList.remove('hidden'); }
+    function hideLoader() { document.getElementById('loading-indicator').classList.add('hidden'); }
 
     window.toggleTheme = function toggleTheme() {
       if (document.documentElement.classList.contains('dark')) {
@@ -531,7 +602,7 @@
         }
       });
       
-      adjustMainPadding(); // Re-adjust padding in case filters wrap differently
+      adjustMainPadding();
       
       if(document.getElementById('home-section').classList.contains('hidden') === false) {
           const allBtn = document.querySelector('.genre-pill');
@@ -540,7 +611,6 @@
     };
 
     function renderHero(item) {
-        // FIXED MEDIA ISSUE: Safely falls back directly to object structure if explicit media_type is omitted by the API
         const type = item.media_type || (item.name ? 'tv' : 'movie');
         const title = item.title || item.name;
         const bgImg = `${IMG_ORIGINAL}${item.backdrop_path}`;
@@ -773,13 +843,9 @@
         try {
             const urlObj = new URL(url);
             const hostname = urlObj.hostname;
-            
             const response = await fetch(`https://dns.google/resolve?name=${hostname}&type=A`);
             const data = await response.json();
-            
-            if (data.Status === 0 && data.Answer && data.Answer.length > 0) {
-                return true; 
-            }
+            if (data.Status === 0 && data.Answer && data.Answer.length > 0) return true; 
             return false;
         } catch (error) {
             console.warn("Failed to verify server status, assuming it might be down:", error);
@@ -791,9 +857,7 @@
         const toast = document.getElementById('server-error-toast');
         document.getElementById('server-error-message').textContent = message;
         toast.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-4');
-        setTimeout(() => {
-            toast.classList.add('opacity-0', 'pointer-events-none', 'translate-y-4');
-        }, 3000);
+        setTimeout(() => toast.classList.add('opacity-0', 'pointer-events-none', 'translate-y-4'), 3000);
     }
 
     async function setVideoSource() {
@@ -818,7 +882,6 @@
                 url = server.getTv(currentModalItem.id, currentSeason, currentEpisode);
             }
 
-            // Check if the domain is reachable before trying to load it
             const isReachable = await checkServerStatus(url);
 
             if (isReachable) {
@@ -840,10 +903,7 @@
                 localStorage.setItem('streamflix_last_watched', JSON.stringify(lastWatched));
                 renderContinueBar();
                 
-                // Add a small delay to ensure loader is visible before setting src
-                setTimeout(() => {
-                    document.getElementById('video-frame').src = url;
-                }, 300);
+                setTimeout(() => document.getElementById('video-frame').src = url, 300);
             } else {
                 console.log(`Server ${server.name} appears to be unreachable. Skipping...`);
                 showToast(`${server.name} is currently unreachable. Switching server...`);
@@ -1032,7 +1092,6 @@
         document.getElementById('btn-icon-favorite').textContent = inFavs ? '❤️' : '🤍';
     }
 
-    // Custom confirm dialog logic to avoid using native confirm()
     window.requestClearList = function requestClearList() {
         const modal = document.getElementById('confirm-modal');
         const content = document.getElementById('confirm-modal-content');
