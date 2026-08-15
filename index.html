@@ -39,10 +39,14 @@
       }
     }
 
-    if (localStorage.getItem('theme') === 'light' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: light)').matches)) {
-      document.documentElement.classList.remove('dark');
-      document.getElementById('meta-theme-color')?.setAttribute('content', '#f9fafb');
-    } else {
+    try {
+      if (localStorage.getItem('theme') === 'light' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: light)').matches)) {
+        document.documentElement.classList.remove('dark');
+        document.getElementById('meta-theme-color')?.setAttribute('content', '#f9fafb');
+      } else {
+        document.documentElement.classList.add('dark');
+      }
+    } catch(e) {
       document.documentElement.classList.add('dark');
     }
   </script>
@@ -140,54 +144,6 @@
     #player-wrapper:-webkit-full-screen { max-height: 100vh !important; border: none !important; border-radius: 0 !important; }
     #player-wrapper:-moz-full-screen { max-height: 100vh !important; border: none !important; border-radius: 0 !important; }
   </style>
-
-  <script>
-    // Very Basic JS Ad-Blocker (Domain Blocking)
-    // This intercepts fetch/XHR requests made from YOUR domain.
-    // It WILL NOT intercept requests made inside the video iframes.
-    const adDomains = [
-        "doubleclick.net", "adservice.google.com", "googlesyndication.com",
-        "adnxs.com", "advertising.com", "amazon-adsystem.com",
-        "criteo.com", "rubiconproject.com", "taboola.com", "outbrain.com",
-        "ads.twitter.com", "pixel.facebook.com"
-        // Add more known ad domains here
-    ];
-
-    const isAdRequest = (url) => {
-        try {
-            const urlObj = new URL(url, window.location.href);
-            return adDomains.some(domain => urlObj.hostname.includes(domain));
-        } catch (e) {
-            return false;
-        }
-    };
-
-    // Intercept Fetch API
-    const originalFetch = window.fetch;
-    window.fetch = async function(...args) {
-        if (isAdRequest(args[0])) {
-            console.log("Blocked ad request (fetch):", args[0]);
-            return new Response(null, { status: 204 }); // Return empty response
-        }
-        return originalFetch.apply(this, args);
-    };
-
-    // Intercept XMLHttpRequest
-    const originalXhrOpen = XMLHttpRequest.prototype.open;
-    XMLHttpRequest.prototype.open = function(method, url, ...rest) {
-        if (isAdRequest(url)) {
-            console.log("Blocked ad request (XHR):", url);
-            // Prevent the request from actually sending
-            this.send = () => {}; 
-            // Fake a successful empty response
-            Object.defineProperty(this, 'status', { get: () => 204 });
-            Object.defineProperty(this, 'readyState', { get: () => 4 });
-            if (this.onload) setTimeout(this.onload.bind(this), 0);
-            return;
-        }
-        originalXhrOpen.call(this, method, url, ...rest);
-    };
-  </script>
 </head>
 
 <body class="min-h-screen bg-gray-50 dark:bg-zinc-950 text-gray-900 dark:text-zinc-100 flex flex-col selection:bg-red-600 selection:text-white antialiased">
@@ -365,14 +321,6 @@
           <span class="text-sm text-gray-400 font-bold tracking-wider uppercase pulse-glow">Connecting...</span>
         </div>
         
-        <!-- 
-             Added sandbox attribute. 
-             This restricts the iframe's capabilities. 
-             It allows scripts and same-origin access (required by video players), 
-             but prevents top-level navigation (popups redirecting your site) 
-             and other potentially malicious actions by ads.
-             Note: Some players might break if they rely on popups or top-navigation.
-        -->
         <iframe 
             id="video-frame" 
             src="" 
@@ -383,7 +331,6 @@
             oallowfullscreen="true" 
             msallowfullscreen="true" 
             allow="autoplay; encrypted-media; fullscreen" 
-            sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"
             onload="document.getElementById('iframe-loader').style.display='none'">
         </iframe>
       </div>
@@ -478,7 +425,7 @@
         { name: 'VidSrc XYZ', getMovie: (id) => `https://vidsrc.xyz/embed/movie?tmdb=${id}`, getTv: (id, s, e) => `https://vidsrc.xyz/embed/tv?tmdb=${id}&season=${s}&episode=${e}`, host: 'vidsrc.xyz' }
     ];
 
-    let currentTheme = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    let currentTheme = 'dark';
     let currentMediaType = 'all';
     let searchTimeout = null;
     let currentModalItem = null;
@@ -486,11 +433,20 @@
     let currentSeason = 1;
     let currentEpisode = 1;
 
-    let watchlist = JSON.parse(localStorage.getItem('streamflix_watchlist')) || [];
-    let favorites = JSON.parse(localStorage.getItem('streamflix_favorites')) || [];
-    let activeTab = 'watchlist';
+    let watchlist = [];
+    let favorites = [];
+    let lastWatched = null;
 
-    let lastWatched = JSON.parse(localStorage.getItem('streamflix_last_watched')) || null;
+    try {
+        currentTheme = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        watchlist = JSON.parse(localStorage.getItem('streamflix_watchlist')) || [];
+        favorites = JSON.parse(localStorage.getItem('streamflix_favorites')) || [];
+        lastWatched = JSON.parse(localStorage.getItem('streamflix_last_watched')) || null;
+    } catch(e) {
+        console.warn("Sandbox restricted localStorage access.");
+    }
+
+    let activeTab = 'watchlist';
 
     document.addEventListener('DOMContentLoaded', () => {
       init();
@@ -557,11 +513,11 @@
     window.toggleTheme = function toggleTheme() {
       if (document.documentElement.classList.contains('dark')) {
         document.documentElement.classList.remove('dark');
-        localStorage.setItem('theme', 'light');
+        try { localStorage.setItem('theme', 'light'); } catch(e) {}
         document.getElementById('meta-theme-color')?.setAttribute('content', '#f9fafb');
       } else {
         document.documentElement.classList.add('dark');
-        localStorage.setItem('theme', 'dark');
+        try { localStorage.setItem('theme', 'dark'); } catch(e) {}
         document.getElementById('meta-theme-color')?.setAttribute('content', '#09090b');
       }
       updateThemeUI();
@@ -900,7 +856,7 @@
                     episode: currentEpisode,
                     timestamp: Date.now()
                 };
-                localStorage.setItem('streamflix_last_watched', JSON.stringify(lastWatched));
+                try { localStorage.setItem('streamflix_last_watched', JSON.stringify(lastWatched)); } catch(e) {}
                 renderContinueBar();
                 
                 setTimeout(() => document.getElementById('video-frame').src = url, 300);
@@ -1075,7 +1031,7 @@
         if(existingIndex >= 0) { list.splice(existingIndex, 1); } 
         else { list.unshift(itemData); }
 
-        localStorage.setItem(`streamflix_${listType}`, JSON.stringify(list));
+        try { localStorage.setItem(`streamflix_${listType}`, JSON.stringify(list)); } catch(e) {}
         updateModalButtonsUI();
         
         if(!document.getElementById('lists-section').classList.contains('hidden') && activeTab === listType) {
@@ -1109,10 +1065,10 @@
     window.executeClearList = function executeClearList() {
         if(activeTab === 'watchlist') {
             watchlist = [];
-            localStorage.setItem('streamflix_watchlist', '[]');
+            try { localStorage.setItem('streamflix_watchlist', '[]'); } catch(e) {}
         } else {
             favorites = [];
-            localStorage.setItem('streamflix_favorites', '[]');
+            try { localStorage.setItem('streamflix_favorites', '[]'); } catch(e) {}
         }
         switchListTab(activeTab);
         closeConfirmModal();
@@ -1166,7 +1122,7 @@
     window.clearContinueWatching = function(e) {
         if(e) e.stopPropagation();
         lastWatched = null;
-        localStorage.removeItem('streamflix_last_watched');
+        try { localStorage.removeItem('streamflix_last_watched'); } catch(e) {}
         renderContinueBar();
     };
 
