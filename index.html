@@ -82,13 +82,15 @@
 <body class="bg-gray-50 dark:bg-zinc-950 text-gray-900 dark:text-zinc-100 min-h-screen flex flex-col transition-colors duration-200 selection:bg-fuchsia-500 selection:text-white">
 
     <script>
-    // Removed external Proxy and API keys for security and reliability.
-    // The app will now run entirely on robust local mock data.
     const CACHE_DURATION = 60 * 60 * 1000; // 1 hour browser cache
 
-    // Using dummyimage.com for reliable mock images
-    const IMG_W500 = 'https://dummyimage.com/500x750/18181b/ffffff&text=';
-    const IMG_ORIGINAL = 'https://dummyimage.com/1920x1080/18181b/ffffff&text=';
+    // Updated TMDB API configuration
+    const TMDB_API_KEY = '15d2ea6d0dc1d476efbca3eba2b9bbfb'; // Updated demo key
+    const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
+
+    // Restored TMDB Image providers
+    const IMG_W500 = 'https://image.tmdb.org/t/p/w500';
+    const IMG_ORIGINAL = 'https://image.tmdb.org/t/p/original';
 
     const SERVERS = [
         { name: 'Embed.su (Fastest)', getMovie: (id) => `https://embed.su/embed/movie/${id}`, getTv: (id, s, e) => `https://embed.su/embed/tv/${id}/${s}/${e}`, host: 'embed.su' },
@@ -132,76 +134,72 @@
         }
     }
 
-    // Comprehensive Fallback Mock Data Generator
-    function getMockData(endpoint, extraParams) {
-        console.log(`Serving mock dataset for: ${endpoint}`);
+    function getMockData(endpoint) {
+        const mockMovie = {
+            id: 533535,
+            title: "Deadpool & Wolverine (Fallback Data)",
+            name: "Deadpool & Wolverine",
+            media_type: "movie",
+            backdrop_path: "/yDHYTfA3R0jFYba16ZBRWUP1C3O.jpg",
+            poster_path: "/8cdWjvZQUExUUTzyp4t6EDMubfO.jpg",
+            overview: "A listless Wade Wilson toils away in civilian life. This is placeholder fallback data displayed because the TMDB API key is invalid or rate-limited.",
+            vote_average: 8.5,
+            release_date: "2024-07-24",
+            runtime: 128,
+            genres: [{name: "Action"}, {name: "Comedy"}],
+            status: "Released"
+        };
+        const mockTv = {
+            id: 94997,
+            title: "House of the Dragon (Fallback Data)",
+            name: "House of the Dragon (Fallback Data)",
+            media_type: "tv",
+            backdrop_path: "/cgKyAWjdPt8xicMQkU111U38z2u.jpg",
+            poster_path: "/t9XkeE7HzOsdQcDDDjtNDYyfeja.jpg",
+            overview: "An internal succession war within House Targaryen at the height of its power. This is placeholder fallback data.",
+            vote_average: 8.4,
+            first_air_date: "2022-08-21",
+            seasons: [{ season_number: 1, name: "Season 1" }, { season_number: 2, name: "Season 2" }],
+            genres: [{name: "Sci-Fi & Fantasy"}, {name: "Drama"}],
+            status: "Returning Series"
+        };
 
-        // Updated mock list with placeholder-friendly paths (just the title string)
-        const mockList = [
-            { id: 693134, title: "Dune: Part Two", media_type: "movie", poster_path: "Dune+Part+Two", backdrop_path: "Dune+Part+Two+Backdrop", vote_average: 8.5, release_date: "2024-02-27", overview: "Paul Atreides unites with Chani and the Fremen while seeking revenge against the conspirators who destroyed his family.", genre_ids: [878, 28] },
-            { id: 93405, name: "Squid Game", media_type: "tv", poster_path: "Squid+Game", backdrop_path: "Squid+Game+Backdrop", vote_average: 8.4, first_air_date: "2021-09-17", overview: "Hundreds of cash-strapped players accept a strange invitation to compete in children's games for a tempting prize.", genre_ids: [18, 28] },
-            { id: 157336, title: "Interstellar", media_type: "movie", poster_path: "Interstellar", backdrop_path: "Interstellar+Backdrop", vote_average: 8.7, release_date: "2014-11-05", overview: "A team of explorers travel through a wormhole in space in an attempt to ensure humanity's survival.", genre_ids: [878, 18] },
-            { id: 66732, name: "Stranger Things", media_type: "tv", poster_path: "Stranger+Things", backdrop_path: "Stranger+Things+Backdrop", vote_average: 8.6, first_air_date: "2016-07-15", overview: "When a young boy vanishes, a small town uncovers a mystery involving secret experiments and supernatural forces.", genre_ids: [878, 18, 27] },
-            { id: 872585, title: "Oppenheimer", media_type: "movie", poster_path: "Oppenheimer", backdrop_path: "Oppenheimer+Backdrop", vote_average: 8.1, release_date: "2023-07-19", overview: "The story of J. Robert Oppenheimer's role in the development of the atomic bomb during World War II.", genre_ids: [18, 36] },
-            { id: 100088, name: "The Last of Us", media_type: "tv", poster_path: "The+Last+of+Us", backdrop_path: "The+Last+of+Us+Backdrop", vote_average: 8.6, first_air_date: "2023-01-15", overview: "Twenty years after modern civilization has been destroyed, Joel is hired to smuggle Ellie out of an oppressive quarantine zone.", genre_ids: [18, 28, 878] },
-            { id: 27205, title: "Inception", media_type: "movie", poster_path: "Inception", backdrop_path: "Inception+Backdrop", vote_average: 8.4, release_date: "2010-07-15", overview: "A thief who steals corporate secrets through the use of dream-sharing technology is given the inverse task of planting an idea.", genre_ids: [28, 878] },
-            { id: 1396, name: "Breaking Bad", media_type: "tv", poster_path: "Breaking+Bad", backdrop_path: "Breaking+Bad+Backdrop", vote_average: 8.9, first_air_date: "2008-01-20", overview: "A chemistry teacher diagnosed with inoperable lung cancer turns to manufacturing and selling methamphetamine.", genre_ids: [18, 28] }
-        ];
-
-        if (endpoint.startsWith('/movie/') || endpoint.startsWith('/tv/')) {
-            const parts = endpoint.split('/');
-            if (parts.length === 3) {
-                const id = parseInt(parts[2]);
-                const found = mockList.find(m => m.id === id) || mockList[0];
-                return {
-                    id: found.id,
-                    title: found.title || found.name,
-                    name: found.name || found.title,
-                    overview: found.overview,
-                    vote_average: found.vote_average,
-                    poster_path: found.poster_path,
-                    backdrop_path: found.backdrop_path,
-                    status: "Released",
-                    release_date: found.release_date || found.first_air_date,
-                    first_air_date: found.first_air_date || found.release_date,
-                    runtime: 148,
-                    genres: [{ id: 28, name: "Action" }, { id: 878, name: "Sci-Fi" }],
-                    seasons: [
-                        { season_number: 1, name: "Season 1" },
-                        { season_number: 2, name: "Season 2" }
-                    ]
-                };
-            } else if (parts.length === 5 && parts[3] === 'season') {
-                const seasonNum = parseInt(parts[4]);
-                return {
-                    season_number: seasonNum,
-                    episodes: [
-                        { episode_number: 1, name: "Episode 1: The Beginning", runtime: 55, still_path: mockList[1].backdrop_path },
-                        { episode_number: 2, name: "Episode 2: The Confrontation", runtime: 48, still_path: mockList[3].backdrop_path },
-                        { episode_number: 3, name: "Episode 3: The Discovery", runtime: 52, still_path: mockList[5].backdrop_path },
-                        { episode_number: 4, name: "Episode 4: Turning Point", runtime: 60, still_path: mockList[0].backdrop_path }
-                    ]
-                };
-            }
+        if (endpoint.includes('/tv/') && endpoint.includes('/season/')) {
+            return { episodes: Array(8).fill(0).map((_, i) => ({ episode_number: i + 1, name: `Mock Episode ${i + 1}`, still_path: "/cgKyAWjdPt8xicMQkU111U38z2u.jpg", runtime: 60 })) };
+        } else if (endpoint.includes('/tv/')) {
+             return mockTv;
+        } else if (endpoint.includes('/movie/') && !endpoint.includes('top_rated')) {
+             return mockMovie;
         }
 
-        if (endpoint.includes('/search/multi')) {
-            const match = extraParams.match(/query=([^&]+)/);
-            const query = match ? decodeURIComponent(match[1]).toLowerCase() : '';
-            const filtered = mockList.filter(item => (item.title || item.name).toLowerCase().includes(query));
-            return { page: 1, results: filtered.length > 0 ? filtered : mockList, total_pages: 1 };
-        }
-
-        return { page: 1, results: mockList, total_pages: 1 };
+        // Return a list of results for discover, trending, search, top_rated
+        return {
+            results: Array(20).fill(0).map((_, i) => {
+                const isMovie = i % 2 === 0;
+                return isMovie ? {...mockMovie, id: mockMovie.id + i} : {...mockTv, id: mockTv.id + i};
+            })
+        };
     }
 
     async function fetchAPI(endpoint, extraParams = '') {
-        // Forced to use mock data since API keys and external proxies are removed for security.
-        return new Promise(resolve => {
-            setTimeout(() => {
-                resolve(getMockData(endpoint, extraParams));
-            }, 300); // Simulate network delay
-        });
+        try {
+            const params = extraParams ? (extraParams.startsWith('&') ? extraParams : `&${extraParams}`) : '';
+            const url = `${TMDB_BASE_URL}${endpoint}?api_key=${TMDB_API_KEY}${params}`;
+            
+            const response = await fetch(url);
+            if (!response.ok) {
+                if (response.status === 401) {
+                    console.warn("TMDB API Key unauthorized (401). Using mock data as fallback.");
+                    return getMockData(endpoint);
+                }
+                throw new Error(`API Error: ${response.status}`);
+            }
+            return await response.json();
+        } catch (error) {
+            console.error('Error fetching data from TMDB:', error);
+            // Gracefully fallback to mock data on network errors
+            return getMockData(endpoint);
+        }
     }
 
     async function init() {
