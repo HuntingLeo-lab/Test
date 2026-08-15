@@ -2,16 +2,22 @@
 <html lang="en" class="dark">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta http-equiv="X-UA-Compatible" content="ie=edge">
   
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
   
+  <!-- Mobile PWA & Native App Experience Tags -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="format-detection" content="telephone=no">
   <meta name="referrer" content="no-referrer">
   <meta name="theme-color" id="meta-theme-color" content="#09090b">
-  <title>Broadway4U Movies - Free Movies & TV</title>
+  
+  <title>Broadway4U Movies - Mobile & Desktop Streaming</title>
   
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
@@ -23,17 +29,18 @@
             brand: { 50: '#fef2f2', 500: '#ef4444', 600: '#dc2626', 700: '#b91c1c', 900: '#7f1d1d' }
           },
           screens: {
+            'xxs': '360px',
             'xs': '420px',
             '3xl': '1800px',
           },
           animation: {
-            'fade-in': 'fadeIn 0.5s ease-out forwards',
-            'slide-up': 'slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+            'fade-in': 'fadeIn 0.4s ease-out forwards',
+            'slide-up': 'slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards',
             'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
           },
           keyframes: {
             fadeIn: { '0%': { opacity: '0' }, '100%': { opacity: '1' } },
-            slideUp: { '0%': { opacity: '0', transform: 'translateY(20px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } }
+            slideUp: { '0%': { opacity: '0', transform: 'translateY(15px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } }
           }
         }
       }
@@ -48,59 +55,74 @@
   </script>
   
   <style>
+    /* iOS & Android Safe Area Variables */
+    :root {
+      --sat: env(safe-area-inset-top, 0px);
+      --sab: env(safe-area-inset-bottom, 0px);
+      --sal: env(safe-area-inset-left, 0px);
+      --sar: env(safe-area-inset-right, 0px);
+    }
+
+    /* Hide scrollbars for slick mobile horizontal scrolling */
     .no-scrollbar::-webkit-scrollbar { display: none; }
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     
-    .custom-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
+    .custom-scroll::-webkit-scrollbar { width: 5px; height: 5px; }
     .custom-scroll::-webkit-scrollbar-track { background: transparent; }
     .custom-scroll::-webkit-scrollbar-thumb { background: #d4d4d8; border-radius: 9999px; }
     .dark .custom-scroll::-webkit-scrollbar-thumb { background: #3f3f46; }
-    .custom-scroll::-webkit-scrollbar-thumb:hover { background: #ef4444; }
-    .dark .custom-scroll::-webkit-scrollbar-thumb:hover { background: #dc2626; }
 
     body {
       -webkit-tap-highlight-color: transparent;
+      -webkit-touch-callout: none;
       overflow-x: hidden;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
       transition: background-color 0.3s ease, color 0.3s ease;
-      padding-left: env(safe-area-inset-left);
-      padding-right: env(safe-area-inset-right);
-      padding-bottom: env(safe-area-inset-bottom);
+      padding-left: var(--sal);
+      padding-right: var(--sar);
     }
 
+    /* Mobile Glassmorphic panels */
     .glass-panel {
-      background: rgba(255, 255, 255, 0.85);
+      background: rgba(255, 255, 255, 0.88);
       backdrop-filter: blur(16px);
       -webkit-backdrop-filter: blur(16px);
-      border: 1px solid rgba(0, 0, 0, 0.05);
+      border: 1px solid rgba(0, 0, 0, 0.06);
     }
     .dark .glass-panel {
-      background: rgba(18, 18, 20, 0.75);
+      background: rgba(18, 18, 20, 0.82);
       border: 1px solid rgba(255, 255, 255, 0.08);
     }
 
     .glass-nav {
-      background: rgba(249, 250, 251, 0.9);
+      background: rgba(249, 250, 251, 0.92);
       backdrop-filter: blur(20px);
       -webkit-backdrop-filter: blur(20px);
     }
-    .dark .glass-nav { background: rgba(9, 9, 11, 0.9); }
+    .dark .glass-nav { background: rgba(9, 9, 11, 0.92); }
 
     .media-card {
-      transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.4s ease;
-      cursor: pointer;
+      transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease;
+      touch-action: manipulation;
     }
-    .media-card.animate-in { animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-    .media-card:hover {
-      transform: translateY(-6px) scale(1.03);
-      box-shadow: 0 15px 35px -10px rgba(220, 38, 38, 0.4);
-      z-index: 10;
+    .media-card.animate-in { animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+    
+    /* Hover on desktop, direct active state on mobile touch */
+    @media (hover: hover) {
+      .media-card:hover {
+        transform: translateY(-6px) scale(1.03);
+        box-shadow: 0 15px 30px -10px rgba(220, 38, 38, 0.4);
+        z-index: 10;
+      }
+    }
+    .media-card:active {
+      transform: scale(0.96);
     }
 
     #player-modal { transition: opacity 0.3s ease, visibility 0.3s ease; }
     .modal-content {
-      transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s ease;
-      transform: scale(0.95) translateY(15px);
+      transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.35s ease;
+      transform: scale(0.96) translateY(12px);
       opacity: 0;
     }
     .modal-active .modal-content {
@@ -108,8 +130,8 @@
       opacity: 1;
     }
 
-    .hero-glow { background: radial-gradient(circle at 50% 0%, rgba(220, 38, 38, 0.08) 0%, rgba(249, 250, 251, 0) 70%); }
-    .dark .hero-glow { background: radial-gradient(circle at 50% 0%, rgba(220, 38, 38, 0.18) 0%, rgba(9, 9, 11, 0) 70%); }
+    .hero-glow { background: radial-gradient(circle at 50% 0%, rgba(220, 38, 38, 0.1) 0%, rgba(249, 250, 251, 0) 75%); }
+    .dark .hero-glow { background: radial-gradient(circle at 50% 0%, rgba(220, 38, 38, 0.22) 0%, rgba(9, 9, 11, 0) 75%); }
 
     .pulse-glow { animation: pulseGlow 2s infinite; }
     @keyframes pulseGlow {
@@ -118,41 +140,36 @@
     }
     
     .episode-card.active {
-        border-color: #ef4444;
-        background-color: rgba(239, 68, 68, 0.1);
+      border-color: #ef4444;
+      background-color: rgba(239, 68, 68, 0.12);
     }
     .dark .episode-card.active {
-        border-color: #dc2626;
-        background-color: rgba(220, 38, 38, 0.2);
+      border-color: #dc2626;
+      background-color: rgba(220, 38, 38, 0.22);
     }
 
     #player-wrapper:fullscreen { max-height: 100vh !important; border: none !important; border-radius: 0 !important; }
     #player-wrapper:-webkit-full-screen { max-height: 100vh !important; border: none !important; border-radius: 0 !important; }
-    #player-wrapper:-moz-full-screen { max-height: 100vh !important; border: none !important; border-radius: 0 !important; }
   </style>
 </head>
 
-<body class="min-h-screen bg-gray-50 dark:bg-zinc-950 text-gray-900 dark:text-zinc-100 flex flex-col selection:bg-red-600 selection:text-white antialiased">
+<body class="min-h-[100dvh] bg-gray-50 dark:bg-zinc-950 text-gray-900 dark:text-zinc-100 flex flex-col selection:bg-red-600 selection:text-white antialiased pb-20 md:pb-6">
 
-  <nav class="fixed top-0 w-full z-40 glass-nav border-b border-gray-200 dark:border-zinc-800/80 transition-all duration-300">
+  <nav class="fixed top-0 w-full z-40 glass-nav border-b border-gray-200/80 dark:border-zinc-800/80 transition-all duration-300 pt-[var(--sat)]">
     <div class="max-w-[1800px] mx-auto flex flex-col w-full">
       
-      <!-- Top Row: Logo & Icons -->
-      <div class="px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between w-full">
-        <h1 onclick="resetView()" class="text-2xl sm:text-3xl font-black tracking-tighter cursor-pointer flex items-center group select-none shrink-0">
+      <!-- Top Bar: Logo & Desktop Controls -->
+      <div class="px-3 sm:px-6 lg:px-8 py-2.5 sm:py-3 flex items-center justify-between w-full min-h-[52px]">
+        <h1 onclick="resetView()" class="text-xl xxs:text-2xl sm:text-3xl font-black tracking-tighter cursor-pointer flex items-center group select-none shrink-0 active:scale-95 transition-transform">
           <span class="text-red-600 group-hover:text-red-500 transition-colors drop-shadow-[0_0_8px_rgba(220,38,38,0.3)] dark:drop-shadow-[0_0_12px_rgba(220,38,38,0.5)]">BROADWAY</span>
           <span class="text-gray-900 dark:text-white group-hover:text-gray-600 dark:group-hover:text-zinc-200 transition-colors">4U</span>
-          <span class="hidden xs:inline-block text-[10px] bg-red-100 dark:bg-red-600/20 text-red-600 dark:text-red-500 border border-red-200 dark:border-red-600/40 font-extrabold px-2 py-0.5 rounded-full ml-2 uppercase tracking-widest shadow-sm">FREE
-          </span>
+          <span class="text-[9px] xxs:text-[10px] bg-red-100 dark:bg-red-600/20 text-red-600 dark:text-red-500 border border-red-200 dark:border-red-600/40 font-extrabold px-1.5 py-0.5 rounded-full ml-1.5 uppercase tracking-widest shadow-sm">FREE</span>
         </h1>
 
-        <!-- Mobile specific Quick Icons -->
-        <div class="flex md:hidden items-center gap-2">
-           <button onclick="toggleListsSection()" class="p-2 rounded-lg bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 text-gray-600 dark:text-zinc-300 hover:text-red-600 shadow-sm">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/></svg>
-          </button>
-          <button onclick="toggleTheme()" class="p-2 rounded-lg bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 text-gray-600 dark:text-zinc-300 shadow-sm">
-            <svg id="theme-icon-mobile" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
+        <!-- Mobile Header Quick Search Toggle -->
+        <div class="flex md:hidden items-center gap-1.5">
+          <button onclick="focusMobileSearch()" class="p-2 rounded-xl bg-gray-100 dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 text-gray-700 dark:text-zinc-300 active:scale-90 transition-transform min-w-[40px] min-h-[40px] flex items-center justify-center">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
           </button>
         </div>
         
@@ -172,84 +189,85 @@
         </div>
       </div>
 
-      <!-- Middle Row: Mobile Filters & Universal Search -->
-      <div class="px-4 sm:px-6 lg:px-8 pb-3 flex flex-col md:flex-row items-center justify-between gap-3 w-full border-b border-gray-200/50 dark:border-zinc-800/30 md:border-none">
+      <!-- Middle Row: Mobile Media Filter Toggles & Search Bar -->
+      <div class="px-3 sm:px-6 lg:px-8 pb-2.5 flex flex-col md:flex-row items-center justify-between gap-2 w-full border-b border-gray-200/50 dark:border-zinc-800/30 md:border-none">
         
         <!-- Mobile only: Movies/TV Toggle -->
-        <div class="flex md:hidden w-full bg-white dark:bg-zinc-900/90 p-1 rounded-xl border border-gray-200 dark:border-zinc-800 text-sm font-bold shadow-sm justify-between">
-          <button id="toggle-all-mobile" onclick="switchMediaType('all')" class="flex-1 px-3 py-2 rounded-lg bg-red-600 text-white shadow-sm transition-all active:scale-95 text-center">All</button>
-          <button id="toggle-movie-mobile" onclick="switchMediaType('movie')" class="flex-1 px-3 py-2 rounded-lg text-gray-500 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-white transition-all active:scale-95 text-center">Movies</button>
-          <button id="toggle-tv-mobile" onclick="switchMediaType('tv')" class="flex-1 px-3 py-2 rounded-lg text-gray-500 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-white transition-all active:scale-95 text-center">TV</button>
+        <div class="flex md:hidden w-full bg-gray-200/60 dark:bg-zinc-900/90 p-1 rounded-xl border border-gray-200 dark:border-zinc-800/80 text-xs xxs:text-sm font-bold shadow-inner justify-between">
+          <button id="toggle-all-mobile" onclick="switchMediaType('all')" class="flex-1 py-1.5 rounded-lg bg-red-600 text-white shadow-sm transition-all active:scale-95 text-center">All</button>
+          <button id="toggle-movie-mobile" onclick="switchMediaType('movie')" class="flex-1 py-1.5 rounded-lg text-gray-600 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-white transition-all active:scale-95 text-center">Movies</button>
+          <button id="toggle-tv-mobile" onclick="switchMediaType('tv')" class="flex-1 py-1.5 rounded-lg text-gray-600 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-white transition-all active:scale-95 text-center">TV</button>
         </div>
 
-        <!-- Universal Search Bar -->
-        <div class="flex items-center gap-2 bg-white dark:bg-zinc-900/90 border border-gray-200 dark:border-zinc-800 focus-within:border-red-600 focus-within:ring-2 focus-within:ring-red-600/30 rounded-xl px-4 py-2.5 w-full md:w-80 lg:w-96 md:ml-auto transition-all shadow-sm group">
-          <svg class="w-5 h-5 text-gray-400 dark:text-zinc-500 group-focus-within:text-red-500 transition-colors shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-          <input id="search-input" type="text" placeholder="Search titles..." class="bg-transparent border-none outline-none text-sm w-full text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-zinc-500 font-medium" onkeyup="handleSearch(event)">
+        <!-- Universal Search Input Bar -->
+        <div class="flex items-center gap-2 bg-white dark:bg-zinc-900/90 border border-gray-200 dark:border-zinc-800 focus-within:border-red-600 focus-within:ring-2 focus-within:ring-red-600/30 rounded-xl px-3 py-2 w-full md:w-80 lg:w-96 md:ml-auto transition-all shadow-sm group">
+          <svg class="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 dark:text-zinc-500 group-focus-within:text-red-500 transition-colors shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+          <input id="search-input" type="text" placeholder="Search movies, TV shows..." class="bg-transparent border-none outline-none text-xs sm:text-sm w-full text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-zinc-500 font-medium" onkeyup="handleSearch(event)">
+          <button id="clear-search-btn" onclick="clearSearch()" class="hidden text-gray-400 hover:text-gray-600 dark:hover:text-white p-1">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
         </div>
       </div>
 
-      <!-- Bottom Row: Genres (Scrollable) -->
-      <div class="px-4 sm:px-6 lg:px-8 py-2.5 flex gap-2 overflow-x-auto no-scrollbar text-sm font-semibold border-t border-gray-200/80 dark:border-zinc-800/50 touch-pan-x w-full">
-        <button type="button" onclick="filterByGenre('all', this)" class="genre-pill active text-white bg-gray-900 dark:bg-zinc-100 dark:text-zinc-900 border border-transparent px-5 py-2 rounded-full shrink-0 transition-transform duration-200 active:scale-90 shadow-sm cursor-pointer select-none whitespace-nowrap">All Genres</button>
-        <button type="button" onclick="filterByGenre('28', this)" class="genre-pill text-gray-600 dark:text-zinc-400 bg-white dark:bg-zinc-900/60 border border-gray-200 dark:border-zinc-700 px-5 py-2 rounded-full shrink-0 hover:bg-gray-50 dark:hover:bg-zinc-800 hover:text-gray-900 dark:hover:text-white transition-transform duration-200 active:scale-90 shadow-sm cursor-pointer select-none whitespace-nowrap">Action</button>
-        <button type="button" onclick="filterByGenre('878', this)" class="genre-pill text-gray-600 dark:text-zinc-400 bg-white dark:bg-zinc-900/60 border border-gray-200 dark:border-zinc-700 px-5 py-2 rounded-full shrink-0 hover:bg-gray-50 dark:hover:bg-zinc-800 hover:text-gray-900 dark:hover:text-white transition-transform duration-200 active:scale-90 shadow-sm cursor-pointer select-none whitespace-nowrap">Sci-Fi</button>
-        <button type="button" onclick="filterByGenre('35', this)" class="genre-pill text-gray-600 dark:text-zinc-400 bg-white dark:bg-zinc-900/60 border border-gray-200 dark:border-zinc-700 px-5 py-2 rounded-full shrink-0 hover:bg-gray-50 dark:hover:bg-zinc-800 hover:text-gray-900 dark:hover:text-white transition-transform duration-200 active:scale-90 shadow-sm cursor-pointer select-none whitespace-nowrap">Comedy</button>
-        <button type="button" onclick="filterByGenre('27', this)" class="genre-pill text-gray-600 dark:text-zinc-400 bg-white dark:bg-zinc-900/60 border border-gray-200 dark:border-zinc-700 px-5 py-2 rounded-full shrink-0 hover:bg-gray-50 dark:hover:bg-zinc-800 hover:text-gray-900 dark:hover:text-white transition-transform duration-200 active:scale-90 shadow-sm cursor-pointer select-none whitespace-nowrap">Horror</button>
-        <button type="button" onclick="filterByGenre('18', this)" class="genre-pill text-gray-600 dark:text-zinc-400 bg-white dark:bg-zinc-900/60 border border-gray-200 dark:border-zinc-700 px-5 py-2 rounded-full shrink-0 hover:bg-gray-50 dark:hover:bg-zinc-800 hover:text-gray-900 dark:hover:text-white transition-transform duration-200 active:scale-90 shadow-sm cursor-pointer select-none whitespace-nowrap">Drama</button>
-        <button type="button" onclick="filterByGenre('16', this)" class="genre-pill text-gray-600 dark:text-zinc-400 bg-white dark:bg-zinc-900/60 border border-gray-200 dark:border-zinc-700 px-5 py-2 rounded-full shrink-0 hover:bg-gray-50 dark:hover:bg-zinc-800 hover:text-gray-900 dark:hover:text-white transition-transform duration-200 active:scale-90 shadow-sm cursor-pointer select-none whitespace-nowrap">Animation</button>
-        <button type="button" onclick="filterByGenre('top', this)" class="genre-pill text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-400/10 border border-amber-200 dark:border-amber-400/20 px-5 py-2 rounded-full shrink-0 hover:bg-amber-100 dark:hover:bg-amber-400/20 font-bold transition-transform duration-200 active:scale-90 shadow-sm cursor-pointer select-none whitespace-nowrap">★ Top Rated</button>
+      <!-- Bottom Row: Genre Filter Pills (Horizontal Touch Swipe) -->
+      <div class="px-3 sm:px-6 lg:px-8 py-2 flex gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar text-xs sm:text-sm font-semibold border-t border-gray-200/80 dark:border-zinc-800/50 touch-pan-x w-full">
+        <button type="button" onclick="filterByGenre('all', this)" class="genre-pill active text-white bg-gray-900 dark:bg-zinc-100 dark:text-zinc-900 border border-transparent px-3.5 sm:px-5 py-1.5 sm:py-2 rounded-full shrink-0 transition-transform active:scale-90 shadow-sm cursor-pointer select-none whitespace-nowrap min-h-[36px]">All Genres</button>
+        <button type="button" onclick="filterByGenre('28', this)" class="genre-pill text-gray-600 dark:text-zinc-400 bg-white dark:bg-zinc-900/60 border border-gray-200 dark:border-zinc-700/80 px-3.5 sm:px-5 py-1.5 sm:py-2 rounded-full shrink-0 transition-transform active:scale-90 shadow-sm cursor-pointer select-none whitespace-nowrap min-h-[36px]">Action</button>
+        <button type="button" onclick="filterByGenre('878', this)" class="genre-pill text-gray-600 dark:text-zinc-400 bg-white dark:bg-zinc-900/60 border border-gray-200 dark:border-zinc-700/80 px-3.5 sm:px-5 py-1.5 sm:py-2 rounded-full shrink-0 transition-transform active:scale-90 shadow-sm cursor-pointer select-none whitespace-nowrap min-h-[36px]">Sci-Fi</button>
+        <button type="button" onclick="filterByGenre('35', this)" class="genre-pill text-gray-600 dark:text-zinc-400 bg-white dark:bg-zinc-900/60 border border-gray-200 dark:border-zinc-700/80 px-3.5 sm:px-5 py-1.5 sm:py-2 rounded-full shrink-0 transition-transform active:scale-90 shadow-sm cursor-pointer select-none whitespace-nowrap min-h-[36px]">Comedy</button>
+        <button type="button" onclick="filterByGenre('27', this)" class="genre-pill text-gray-600 dark:text-zinc-400 bg-white dark:bg-zinc-900/60 border border-gray-200 dark:border-zinc-700/80 px-3.5 sm:px-5 py-1.5 sm:py-2 rounded-full shrink-0 transition-transform active:scale-90 shadow-sm cursor-pointer select-none whitespace-nowrap min-h-[36px]">Horror</button>
+        <button type="button" onclick="filterByGenre('18', this)" class="genre-pill text-gray-600 dark:text-zinc-400 bg-white dark:bg-zinc-900/60 border border-gray-200 dark:border-zinc-700/80 px-3.5 sm:px-5 py-1.5 sm:py-2 rounded-full shrink-0 transition-transform active:scale-90 shadow-sm cursor-pointer select-none whitespace-nowrap min-h-[36px]">Drama</button>
+        <button type="button" onclick="filterByGenre('16', this)" class="genre-pill text-gray-600 dark:text-zinc-400 bg-white dark:bg-zinc-900/60 border border-gray-200 dark:border-zinc-700/80 px-3.5 sm:px-5 py-1.5 sm:py-2 rounded-full shrink-0 transition-transform active:scale-90 shadow-sm cursor-pointer select-none whitespace-nowrap min-h-[36px]">Animation</button>
+        <button type="button" onclick="filterByGenre('top', this)" class="genre-pill text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-400/10 border border-amber-200 dark:border-amber-400/20 px-3.5 sm:px-5 py-1.5 sm:py-2 rounded-full shrink-0 font-bold transition-transform active:scale-90 shadow-sm cursor-pointer select-none whitespace-nowrap min-h-[36px]">★ Top Rated</button>
       </div>
     </div>
   </nav>
 
-  <main class="max-w-[1800px] mx-auto flex-grow w-full pb-20 transition-[padding] duration-300">
+  <main class="max-w-[1800px] mx-auto flex-grow w-full transition-[padding] duration-300">
     
-    <!-- Loading Spinner -->
-    <div id="loading-indicator" class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50">
-      <div class="glass-panel p-6 sm:p-8 rounded-3xl flex flex-col items-center gap-4 shadow-2xl border border-gray-200 dark:border-zinc-800">
-        <div class="animate-spin rounded-full h-12 w-12 border-4 border-red-600 border-t-transparent shadow-lg"></div>
-        <span class="text-sm font-bold text-gray-500 dark:text-zinc-400 tracking-wider uppercase animate-pulse">Loading Magic...</span>
+    <!-- Loading Spinner Overlay -->
+    <div id="loading-indicator" class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
+      <div class="glass-panel p-6 rounded-3xl flex flex-col items-center gap-3.5 shadow-2xl border border-gray-200 dark:border-zinc-800">
+        <div class="animate-spin rounded-full h-10 w-10 border-4 border-red-600 border-t-transparent shadow-lg"></div>
+        <span class="text-xs font-bold text-gray-600 dark:text-zinc-300 tracking-wider uppercase animate-pulse">Loading Content...</span>
       </div>
     </div>
 
-    <!-- Error container -->
-    <div id="error-container" class="hidden pt-20 px-4 text-center">
-      <div class="glass-panel p-8 rounded-3xl max-w-md mx-auto shadow-2xl border border-red-200 dark:border-red-900/30">
-        <svg class="w-16 h-16 text-red-500 mx-auto mb-4 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
-        <h2 class="text-xl font-black mb-2 text-gray-900 dark:text-white">Connection Issue</h2>
-        <p class="text-sm text-gray-500 dark:text-zinc-400 mb-6">Unable to connect to the database. Please verify your connection.</p>
-        <button onclick="init()" class="bg-red-600 hover:bg-red-500 text-white font-bold px-6 py-2.5 rounded-xl transition-all shadow-lg active:scale-95 text-sm tracking-wider uppercase">Retry Connection</button>
+    <!-- Error Container -->
+    <div id="error-container" class="hidden pt-24 px-4 text-center">
+      <div class="glass-panel p-6 sm:p-8 rounded-3xl max-w-md mx-auto shadow-2xl border border-red-200 dark:border-red-900/30">
+        <svg class="w-12 h-12 sm:w-16 sm:h-16 text-red-500 mx-auto mb-3 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+        <h2 class="text-lg sm:text-xl font-black mb-1.5 text-gray-900 dark:text-white">Connection Issue</h2>
+        <p class="text-xs sm:text-sm text-gray-500 dark:text-zinc-400 mb-5">Unable to load titles. Please check your internet connection.</p>
+        <button onclick="init()" class="bg-red-600 hover:bg-red-500 text-white font-bold px-6 py-2.5 rounded-xl transition-all shadow-lg active:scale-95 text-xs sm:text-sm tracking-wider uppercase">Retry Connection</button>
       </div>
     </div>
 
-    <div id="search-section" class="hidden px-4 sm:px-6 lg:px-8 min-h-[70dvh] animate-fade-in">
-      <div class="flex items-center justify-between mb-6 border-b border-gray-200 dark:border-zinc-800/80 pb-4">
+    <!-- Search Section -->
+    <div id="search-section" class="hidden px-3 sm:px-6 lg:px-8 min-h-[70dvh] animate-fade-in">
+      <div class="flex items-center justify-between mb-4 sm:mb-6 border-b border-gray-200 dark:border-zinc-800/80 pb-3">
         <div>
-          <h2 id="search-title" class="text-2xl sm:text-3xl font-black tracking-tight flex items-center gap-2 text-gray-900 dark:text-white">Search Results</h2>
-          <p id="search-query-desc" class="text-sm text-gray-500 dark:text-zinc-500 font-medium mt-1">Showing titles matching your query</p>
+          <h2 id="search-title" class="text-xl sm:text-3xl font-black tracking-tight text-gray-900 dark:text-white">Search Results</h2>
+          <p id="search-query-desc" class="text-xs sm:text-sm text-gray-500 dark:text-zinc-500 font-medium mt-0.5">Showing titles matching your query</p>
         </div>
       </div>
-      <div id="search-grid" class="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 2xl:grid-cols-8 gap-3 sm:gap-4 lg:gap-6 pb-10"></div>
+      <div id="search-grid" class="grid grid-cols-2 xxs:grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 2xl:grid-cols-8 gap-2.5 sm:gap-4 lg:gap-6 pb-12"></div>
     </div>
 
-    <div id="lists-section" class="hidden px-4 sm:px-6 lg:px-8 min-h-[70dvh] animate-fade-in">
-      <div class="flex flex-col sm:flex-row sm:items-end justify-between mb-6 border-b border-gray-200 dark:border-zinc-800/80 pb-4 gap-4">
+    <!-- Lists Section (Watchlist & Favorites) -->
+    <div id="lists-section" class="hidden px-3 sm:px-6 lg:px-8 min-h-[70dvh] animate-fade-in">
+      <div class="flex flex-col sm:flex-row sm:items-end justify-between mb-4 sm:mb-6 border-b border-gray-200 dark:border-zinc-800/80 pb-3 gap-3">
         <div>
-          <h2 class="text-3xl sm:text-4xl font-black tracking-tight flex items-center gap-3 text-gray-900 dark:text-white">
-            <svg class="w-8 h-8 text-red-600 drop-shadow-md" fill="currentColor" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg> My Library
+          <h2 class="text-2xl sm:text-4xl font-black tracking-tight flex items-center gap-2 text-gray-900 dark:text-white">
+            <svg class="w-6 h-6 sm:w-8 sm:h-8 text-red-600 drop-shadow-md" fill="currentColor" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg> My Library
           </h2>
-          <p class="text-sm sm:text-base text-gray-500 dark:text-zinc-500 font-medium mt-1">Manage your Watchlist and Favorites</p>
+          <p class="text-xs sm:text-base text-gray-500 dark:text-zinc-500 font-medium mt-0.5">Your Watchlist and Favorites</p>
         </div>
         
-        <div class="flex w-full sm:w-auto bg-white dark:bg-zinc-900 p-1.5 rounded-xl border border-gray-200 dark:border-zinc-800 text-sm font-bold shadow-sm">
-          <button id="tab-watchlist" onclick="switchListTab('watchlist')" class="flex-1 sm:flex-none px-6 py-2.5 rounded-lg bg-red-600 text-white shadow-md transition-all active:scale-95 text-center">Watchlist</button>
-          <button id="tab-favorites" onclick="switchListTab('favorites')" class="flex-1 sm:flex-none px-6 py-2.5 rounded-lg text-gray-500 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-white transition-all active:scale-95 text-center">Favorites <span class="text-red-500 ml-1">❤</span></button>
+        <div class="flex w-full sm:w-auto bg-gray-200/60 dark:bg-zinc-900 p-1 rounded-xl border border-gray-200 dark:border-zinc-800 text-xs sm:text-sm font-bold shadow-sm">
+          <button id="tab-watchlist" onclick="switchListTab('watchlist')" class="flex-1 sm:flex-none px-4 sm:px-6 py-2 rounded-lg bg-red-600 text-white shadow-md transition-all active:scale-95 text-center">Watchlist</button>
+          <button id="tab-favorites" onclick="switchListTab('favorites')" class="flex-1 sm:flex-none px-4 sm:px-6 py-2 rounded-lg text-gray-500 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-white transition-all active:scale-95 text-center">Favorites <span class="text-red-500 ml-0.5">❤</span></button>
         </div>
       </div>
       
-      <div class="flex justify-between items-center mb-4">
-        <h3 id="current-list-title" class="text-lg sm:text-xl font-bold text-gray-800 dark:text-gray-200">Your Watchlist</h3>
-        <button onclick="requestClearList()" class="text-xs sm:text-sm font-bold text-gray-500 dark:text-zinc-400 hover:text-red-600 transition-colors bg-gray-100 dark:bg-zinc-900 px-4 py-2 rounded-lg border border-gray-200 dark:border-zinc-800 active:scale-95">Clear List</button>
-      </div>
-      <div id="lists-grid" class="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-
+      <d
