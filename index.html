@@ -93,16 +93,28 @@
     const IMG_ORIGINAL = 'https://image.tmdb.org/t/p/original';
 
     const SERVERS = [
-        { name: 'Embed.su (Fastest)', getMovie: (id) => `https://embed.su/embed/movie/${id}`, getTv: (id, s, e) => `https://embed.su/embed/tv/${id}/${s}/${e}`, host: 'embed.su' },
-        { name: 'AutoEmbed', getMovie: (id) => `https://player.autoembed.cc/embed/movie/${id}`, getTv: (id, s, e) => `https://player.autoembed.cc/embed/tv/${id}/${s}/${e}`, host: 'autoembed.cc' },
         { name: 'VidLink PRO', getMovie: (id) => `https://vidlink.pro/movie/${id}`, getTv: (id, s, e) => `https://vidlink.pro/tv/${id}/${s}/${e}`, host: 'vidlink.pro' },
-        { name: 'VidSrc NET', getMovie: (id) => `https://vidsrc.net/embed/movie?tmdb=${id}`, getTv: (id, s, e) => `https://vidsrc.net/embed/tv?tmdb=${id}&season=${s}&episode=${e}`, host: 'vidsrc.net' },
+        { name: 'Embed.su (Fastest)', getMovie: (id) => `https://embed.su/embed/movie/${id}`, getTv: (id, s, e) => `https://embed.su/embed/tv/${id}/${s}/${e}`, host: 'embed.su' },
+        { name: 'VidSrc ME', getMovie: (id) => `https://vidsrc.me/embed/movie?tmdb=${id}`, getTv: (id, s, e) => `https://vidsrc.me/embed/tv?tmdb=${id}&season=${s}&episode=${e}`, host: 'vidsrc.me' },
+        { name: 'VidSrc TO', getMovie: (id) => `https://vidsrc.to/embed/movie?tmdb=${id}`, getTv: (id, s, e) => `https://vidsrc.to/embed/tv?tmdb=${id}&season=${s}&episode=${e}`, host: 'vidsrc.to' },
+        { name: 'AutoEmbed', getMovie: (id) => `https://player.autoembed.cc/embed/movie/${id}`, getTv: (id, s, e) => `https://player.autoembed.cc/embed/tv/${id}/${s}/${e}`, host: 'autoembed.cc' },
         { name: 'SuperEmbed', getMovie: (id) => `https://multiembed.mov/?video_id=${id}&tmdb=1`, getTv: (id, s, e) => `https://multiembed.mov/?video_id=${id}&tmdb=1&s=${s}&e=${e}`, host: 'multiembed.mov' },
+        { name: 'SmashyStream', getMovie: (id) => `https://player.smashy.stream/movie/${id}`, getTv: (id, s, e) => `https://player.smashy.stream/tv/${id}?s=${s}&e=${e}`, host: 'smashy.stream' },
+        { name: 'VidSrc PRO', getMovie: (id) => `https://vidsrc.pro/embed/movie/${id}`, getTv: (id, s, e) => `https://vidsrc.pro/embed/tv/${id}/${s}/${e}`, host: 'vidsrc.pro' },
+        { name: 'VidSrc NET', getMovie: (id) => `https://vidsrc.net/embed/movie?tmdb=${id}`, getTv: (id, s, e) => `https://vidsrc.net/embed/tv?tmdb=${id}&season=${s}&episode=${e}`, host: 'vidsrc.net' },
         { name: 'VidSrc IN', getMovie: (id) => `https://vidsrc.in/embed/movie?tmdb=${id}`, getTv: (id, s, e) => `https://vidsrc.in/embed/tv?tmdb=${id}&season=${s}&episode=${e}`, host: 'vidsrc.in' },
         { name: 'VidSrc CC', getMovie: (id) => `https://vidsrc.cc/v2/embed/movie/${id}`, getTv: (id, s, e) => `https://vidsrc.cc/v2/embed/tv/${id}/${s}/${e}`, host: 'vidsrc.cc' },
+        { name: 'VidSrc XYZ', getMovie: (id) => `https://vidsrc.xyz/embed/movie?tmdb=${id}`, getTv: (id, s, e) => `https://vidsrc.xyz/embed/tv?tmdb=${id}&season=${s}&episode=${e}`, host: 'vidsrc.xyz' },
+        { name: 'VidSrc VIP', getMovie: (id) => `https://vidsrc.vip/embed/movie/${id}`, getTv: (id, s, e) => `https://vidsrc.vip/embed/tv/${id}/${s}/${e}`, host: 'vidsrc.vip' },
+        { name: 'VidSrc NL', getMovie: (id) => `https://player.vidsrc.nl/embed/movie/${id}`, getTv: (id, s, e) => `https://player.vidsrc.nl/embed/tv/${id}/${s}/${e}`, host: 'vidsrc.nl' },
         { name: 'MoviesAPI', getMovie: (id) => `https://moviesapi.club/movie/${id}`, getTv: (id, s, e) => `https://moviesapi.club/tv/${id}-${s}-${e}`, host: 'moviesapi.club' },
-        { name: '2Embed', getMovie: (id) => `https://www.2embed.cc/embed/${id}`, getTv: (id, s, e) => `https://www.2embed.cc/embedtv/${id}&s=${s}&e=${e}`, host: '2embed.cc' },
-        { name: 'VidSrc XYZ', getMovie: (id) => `https://vidsrc.xyz/embed/movie?tmdb=${id}`, getTv: (id, s, e) => `https://vidsrc.xyz/embed/tv?tmdb=${id}&season=${s}&episode=${e}`, host: 'vidsrc.xyz' }
+        { name: '2Embed CC', getMovie: (id) => `https://www.2embed.cc/embed/${id}`, getTv: (id, s, e) => `https://www.2embed.cc/embedtv/${id}&s=${s}&e=${e}`, host: '2embed.cc' },
+        { name: '2Embed TO', getMovie: (id) => `https://www.2embed.to/embed/tmdb/movie?id=${id}`, getTv: (id, s, e) => `https://www.2embed.to/embed/tmdb/tv?id=${id}&s=${s}&e=${e}`, host: '2embed.to' },
+        { name: 'NontonGo', getMovie: (id) => `https://nontongo.win/embed/movie/${id}`, getTv: (id, s, e) => `https://nontongo.win/embed/tv/${id}/${s}/${e}`, host: 'nontongo.win' },
+        { name: 'AdminHiHi', getMovie: (id) => `https://embed.adminhihi.com/${id}`, getTv: (id, s, e) => `https://embed.adminhihi.com/${id}/${s}/${e}`, host: 'adminhihi.com' },
+        { name: 'Ghost', getMovie: (id) => `https://ghost.autoembed.cc/embed/movie/${id}`, getTv: (id, s, e) => `https://ghost.autoembed.cc/embed/tv/${id}/${s}/${e}`, host: 'ghost.autoembed.cc' },
+        { name: 'Trailer (YouTube)', getMovie: (id, title) => `https://www.youtube.com/embed?listType=search&list=${encodeURIComponent(title + ' movie trailer')}`, getTv: (id, s, e, title) => `https://www.youtube.com/embed?listType=search&list=${encodeURIComponent(title + ' season ' + s + ' trailer')}`, host: 'youtube.com' },
+        { name: 'Free (Tubi Search)', getMovie: (id, title) => `https://tubitv.com/search/${encodeURIComponent(title)}`, getTv: (id, s, e, title) => `https://tubitv.com/search/${encodeURIComponent(title)}`, host: 'tubitv.com' }
     ];
 
     let currentTheme = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
@@ -611,10 +623,11 @@
             if (serverNameEl) serverNameEl.textContent = `Checking: ${server.name}...`;
 
             let url = '';
+            const title = currentModalItem.details.title || currentModalItem.details.name;
             if(currentModalItem.type === 'movie') {
-                url = server.getMovie(currentModalItem.id);
+                url = server.getMovie(currentModalItem.id, title);
             } else {
-                url = server.getTv(currentModalItem.id, currentSeason, currentEpisode);
+                url = server.getTv(currentModalItem.id, currentSeason, currentEpisode, title);
             }
 
             const isReachable = await checkServerStatus(url);
@@ -1135,7 +1148,8 @@
                     <div class="w-10 h-10 border-4 border-fuchsia-600 border-t-transparent rounded-full animate-spin"></div>
                     <span class="text-xs font-bold text-zinc-400 pulse-glow">Finding reliable server...</span>
                 </div>
-                <iframe id="video-frame" class="w-full h-full border-0" allowfullscreen allow="autoplay; encrypted-media"></iframe>
+                <!-- SANDBOX SECURITY: Blocks popups (no allow-popups) and top navigation (no allow-top-navigation) to enforce user safety! -->
+                <iframe id="video-frame" class="w-full h-full border-0" allowfullscreen allow="autoplay; encrypted-media" sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"></iframe>
             </div>
 
             <!-- Bottom Information & TV Controls -->
