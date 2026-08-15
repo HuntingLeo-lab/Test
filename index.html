@@ -93,18 +93,15 @@
     const IMG_ORIGINAL = 'https://image.tmdb.org/t/p/original';
 
     // Servers ordered strictly by Max Quality (4K/HD), Speed, and Reliability
-    const SERVERS = [
-        { name: 'Embed.su (Premium 4K/HD)', getMovie: (id) => `https://embed.su/embed/movie/${id}`, getTv: (id, s, e) => `https://embed.su/embed/tv/${id}/${s}/${e}`, host: 'embed.su' },
-        { name: 'VidLink PRO (Max Res/Fast)', getMovie: (id) => `https://vidlink.pro/movie/${id}?autoplay=1&primary_color=c026d3`, getTv: (id, s, e) => `https://vidlink.pro/tv/${id}/${s}/${e}?autoplay=1&primary_color=c026d3`, host: 'vidlink.pro' },
-        { name: 'VidSrc PRO (Fast HD)', getMovie: (id) => `https://vidsrc.pro/embed/movie/${id}`, getTv: (id, s, e) => `https://vidsrc.pro/embed/tv/${id}/${s}/${e}`, host: 'vidsrc.pro' },
-        { name: 'VidSrc ME (Standard HD)', getMovie: (id) => `https://vidsrc.me/embed/movie?tmdb=${id}`, getTv: (id, s, e) => `https://vidsrc.me/embed/tv?tmdb=${id}&season=${s}&episode=${e}`, host: 'vidsrc.me' },
-        { name: 'SuperEmbed (Multi-Source)', getMovie: (id) => `https://multiembed.mov/?video_id=${id}&tmdb=1`, getTv: (id, s, e) => `https://multiembed.mov/?video_id=${id}&tmdb=1&s=${s}&e=${e}`, host: 'multiembed.mov' },
-        { name: 'AutoEmbed (Auto-Select)', getMovie: (id) => `https://player.autoembed.cc/embed/movie/${id}`, getTv: (id, s, e) => `https://player.autoembed.cc/embed/tv/${id}/${s}/${e}`, host: 'autoembed.cc' },
-        { name: 'VidSrc TO (Backup HD)', getMovie: (id) => `https://vidsrc.to/embed/movie?tmdb=${id}`, getTv: (id, s, e) => `https://vidsrc.to/embed/tv?tmdb=${id}&season=${s}&episode=${e}`, host: 'vidsrc.to' },
-        { name: 'SmashyStream', getMovie: (id) => `https://player.smashy.stream/movie/${id}`, getTv: (id, s, e) => `https://player.smashy.stream/tv/${id}?s=${s}&e=${e}`, host: 'smashy.stream' },
-        { name: 'MoviesAPI', getMovie: (id) => `https://moviesapi.club/movie/${id}`, getTv: (id, s, e) => `https://moviesapi.club/tv/${id}-${s}-${e}`, host: 'moviesapi.club' },
-        { name: 'VidSrc CC', getMovie: (id) => `https://vidsrc.cc/v2/embed/movie/${id}`, getTv: (id, s, e) => `https://vidsrc.cc/v2/embed/tv/${id}/${s}/${e}`, host: 'vidsrc.cc' },
-        { name: 'Trailer (YouTube)', getMovie: (id, title) => `https://www.youtube.com/embed?listType=search&list=${encodeURIComponent(title + ' movie trailer')}`, getTv: (id, s, e, title) => `https://www.youtube.com/embed?listType=search&list=${encodeURIComponent(title + ' season ' + s + ' trailer')}`, host: 'youtube.com' }
+    const DEFAULT_SERVERS = [
+        { name: 'Embed.su (Premium 4K/HD)', getMovie: (id, l) => `https://embed.su/embed/movie/${id}?lang=${l}`, getTv: (id, s, e, l) => `https://embed.su/embed/tv/${id}/${s}/${e}?lang=${l}`, host: 'embed.su' },
+        { name: 'VidLink PRO (Max Res/Fast)', getMovie: (id, l) => `https://vidlink.pro/movie/${id}?autoplay=1&primary_color=c026d3&lang=${l}`, getTv: (id, s, e, l) => `https://vidlink.pro/tv/${id}/${s}/${e}?autoplay=1&primary_color=c026d3&lang=${l}`, host: 'vidlink.pro' },
+        { name: 'VidSrc PRO (Fast HD)', getMovie: (id, l) => `https://vidsrc.pro/embed/movie/${id}`, getTv: (id, s, e, l) => `https://vidsrc.pro/embed/tv/${id}/${s}/${e}`, host: 'vidsrc.pro' },
+        { name: 'VidSrc ME (Standard HD)', getMovie: (id, l) => `https://vidsrc.me/embed/movie?tmdb=${id}`, getTv: (id, s, e, l) => `https://vidsrc.me/embed/tv?tmdb=${id}&season=${s}&episode=${e}`, host: 'vidsrc.me' },
+        { name: 'SuperEmbed (Multi-Source)', getMovie: (id, l) => `https://multiembed.mov/?video_id=${id}&tmdb=1`, getTv: (id, s, e, l) => `https://multiembed.mov/?video_id=${id}&tmdb=1&s=${s}&e=${e}`, host: 'multiembed.mov' },
+        { name: 'AutoEmbed (Auto-Select)', getMovie: (id, l) => `https://player.autoembed.cc/embed/movie/${id}`, getTv: (id, s, e, l) => `https://player.autoembed.cc/embed/tv/${id}/${s}/${e}`, host: 'autoembed.cc' },
+        { name: 'SmashyStream', getMovie: (id, l) => `https://player.smashy.stream/movie/${id}`, getTv: (id, s, e, l) => `https://player.smashy.stream/tv/${id}?s=${s}&e=${e}`, host: 'smashy.stream' },
+        { name: 'Trailer (YouTube)', getMovie: (id, l, title) => `https://www.youtube.com/embed?listType=search&list=${encodeURIComponent(title + ' movie trailer ' + l)}`, getTv: (id, s, e, l, title) => `https://www.youtube.com/embed?listType=search&list=${encodeURIComponent(title + ' season ' + s + ' trailer ' + l)}`, host: 'youtube.com' }
     ];
 
     let currentTheme = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
@@ -115,18 +112,36 @@
     let currentSeason = 1;
     let currentEpisode = 1;
 
+    // User Settings State
+    let preferredLanguage = localStorage.getItem('streamflix_lang') || 'en-US';
+    let customProviders = JSON.parse(localStorage.getItem('streamflix_providers')) || [];
+    let ALL_SERVERS = [...DEFAULT_SERVERS]; // Will be updated by loadProviders()
+
     let watchlist = JSON.parse(localStorage.getItem('streamflix_watchlist')) || [];
     let favorites = JSON.parse(localStorage.getItem('streamflix_favorites')) || [];
     let activeTab = 'watchlist';
     let continueList = JSON.parse(localStorage.getItem('streamflix_continue_watching')) || [];
 
     document.addEventListener('DOMContentLoaded', () => {
+      loadProviders();
       init();
       updateThemeUI();
       adjustMainPadding();
       window.addEventListener('resize', adjustMainPadding);
       window.addEventListener('orientationchange', () => setTimeout(adjustMainPadding, 100));
     });
+
+    function loadProviders() {
+        // Convert custom templates into functional provider objects
+        const customObjects = customProviders.map(p => ({
+            name: `🌟 ${p.name}`,
+            isCustom: true,
+            getMovie: (id, l) => p.movieTemplate.replace(/{id}/g, id).replace(/{lang}/g, l),
+            getTv: (id, s, e, l) => p.tvTemplate.replace(/{id}/g, id).replace(/{s}/g, s).replace(/{e}/g, e).replace(/{lang}/g, l),
+            host: new URL(p.movieTemplate.startsWith('http') ? p.movieTemplate : `https://${p.movieTemplate}`).hostname || 'custom'
+        }));
+        ALL_SERVERS = [...customObjects, ...DEFAULT_SERVERS];
+    }
 
     function adjustMainPadding() {
         const nav = document.querySelector('nav');
@@ -185,8 +200,10 @@
 
     async function fetchAPI(endpoint, extraParams = '') {
         try {
+            // Append the preferred language to TMDB calls so UI gets localized
+            const langParam = `&language=${preferredLanguage}`;
             const params = extraParams ? (extraParams.startsWith('&') ? extraParams : `&${extraParams}`) : '';
-            const url = `${TMDB_BASE_URL}${endpoint}?api_key=${TMDB_API_KEY}${params}`;
+            const url = `${TMDB_BASE_URL}${endpoint}?api_key=${TMDB_API_KEY}${langParam}${params}`;
             
             const response = await fetch(url);
             if (!response.ok) {
@@ -533,10 +550,11 @@
       updateModalButtonsUI();
 
       let targetSeason = 1;
-      let targetEpisode = 1;
-
-      if (resumeData && resumeData.id === id) {
+            if (resumeData && resumeData.id === id) {
           currentServerIndex = resumeData.serverIndex || 0;
+          // Ensure we don't exceed boundaries if custom servers changed
+          if (currentServerIndex >= ALL_SERVERS.length) currentServerIndex = 0;
+
           if (type === 'tv') {
               targetSeason = resumeData.season;
               targetEpisode = resumeData.episode;
@@ -606,19 +624,20 @@
 
         let serverFound = false;
         let attempts = 0;
-        const maxAttempts = SERVERS.length;
+        const maxAttempts = ALL_SERVERS.length;
         let finalUrl = '';
+        const shortLang = preferredLanguage.split('-')[0]; // e.g., 'en', 'es', 'fr'
 
         while (!serverFound && attempts < maxAttempts) {
-            const server = SERVERS[currentServerIndex];
+            const server = ALL_SERVERS[currentServerIndex];
             if (serverNameEl) serverNameEl.textContent = `Testing: ${server.name}...`;
 
             let url = '';
             const title = currentModalItem.details.title || currentModalItem.details.name;
             if(currentModalItem.type === 'movie') {
-                url = server.getMovie(currentModalItem.id, title);
+                url = server.getMovie(currentModalItem.id, shortLang, title);
             } else {
-                url = server.getTv(currentModalItem.id, currentSeason, currentEpisode, title);
+                url = server.getTv(currentModalItem.id, currentSeason, currentEpisode, shortLang, title);
             }
 
             const isReachable = await checkServerStatus(url);
@@ -663,7 +682,7 @@
                 }
             } else {
                 showToast(`${server.name} is currently unreachable. Switching server...`);
-                currentServerIndex = (currentServerIndex + 1) % SERVERS.length;
+                currentServerIndex = (currentServerIndex + 1) % ALL_SERVERS.length;
                 attempts++;
             }
         }
@@ -731,7 +750,7 @@
     };
 
     window.nextServer = function nextServer() {
-        currentServerIndex = (currentServerIndex + 1) % SERVERS.length;
+        currentServerIndex = (currentServerIndex + 1) % ALL_SERVERS.length;
         setVideoSource();
     };
 
@@ -965,6 +984,93 @@
         renderContinueBar();
     };
 
+    window.openSettings = function() {
+        const modal = document.getElementById('settings-modal');
+        const langSelect = document.getElementById('settings-lang-select');
+        
+        if(langSelect) langSelect.value = preferredLanguage;
+        renderCustomProvidersList();
+
+        if (modal) {
+            modal.classList.remove('opacity-0', 'pointer-events-none');
+            setTimeout(() => document.getElementById('settings-content').classList.remove('scale-95'), 10);
+        }
+    };
+
+    window.closeSettings = function() {
+        const modal = document.getElementById('settings-modal');
+        const content = document.getElementById('settings-content');
+        if (content) content.classList.add('scale-95');
+        if (modal) setTimeout(() => modal.classList.add('opacity-0', 'pointer-events-none'), 300);
+    };
+
+    window.saveSettings = function() {
+        const langSelect = document.getElementById('settings-lang-select');
+        if (langSelect && langSelect.value !== preferredLanguage) {
+            preferredLanguage = langSelect.value;
+            localStorage.setItem('streamflix_lang', preferredLanguage);
+            showToast("Language saved! Refreshing content...");
+            // Reload UI to fetch localized titles
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            closeSettings();
+        }
+    };
+
+    window.addCustomProvider = function() {
+        const name = document.getElementById('new-provider-name').value.trim();
+        const mUrl = document.getElementById('new-provider-movie').value.trim();
+        const tUrl = document.getElementById('new-provider-tv').value.trim();
+
+        if(!name || !mUrl || !tUrl) {
+            showToast("Please fill all provider fields.");
+            return;
+        }
+
+        if(!mUrl.includes('{id}') || !tUrl.includes('{id}')) {
+            showToast("URLs must include {id}");
+            return;
+        }
+
+        customProviders.push({ name, movieTemplate: mUrl, tvTemplate: tUrl });
+        localStorage.setItem('streamflix_providers', JSON.stringify(customProviders));
+        
+        document.getElementById('new-provider-name').value = '';
+        document.getElementById('new-provider-movie').value = '';
+        document.getElementById('new-provider-tv').value = '';
+        
+        loadProviders(); // Refresh servers array
+        renderCustomProvidersList();
+        showToast("Provider added successfully!");
+    };
+
+    window.removeProvider = function(index) {
+        customProviders.splice(index, 1);
+        localStorage.setItem('streamflix_providers', JSON.stringify(customProviders));
+        loadProviders();
+        renderCustomProvidersList();
+    };
+
+    function renderCustomProvidersList() {
+        const container = document.getElementById('custom-providers-list');
+        if (!container) return;
+        
+        if (customProviders.length === 0) {
+            container.innerHTML = `<p class="text-xs text-zinc-500 italic py-2">No custom providers added yet.</p>`;
+            return;
+        }
+
+        container.innerHTML = customProviders.map((p, i) => `
+            <div class="flex items-center justify-between bg-zinc-100 dark:bg-zinc-800 p-2.5 rounded-lg border border-gray-200 dark:border-zinc-700">
+                <div class="min-w-0 pr-2">
+                    <h4 class="font-bold text-xs text-gray-900 dark:text-white truncate">${p.name}</h4>
+                    <p class="text-[9px] text-gray-500 dark:text-zinc-400 truncate">Movie: ${p.movieTemplate}</p>
+                </div>
+                <button onclick="removeProvider(${i})" class="shrink-0 p-1.5 bg-red-100 text-red-600 hover:bg-red-500 hover:text-white rounded transition-colors" title="Delete">✕</button>
+            </div>
+        `).join('');
+    }
+
     document.addEventListener('keydown', (e) => {
       if (e.key === '/' && document.activeElement !== document.getElementById('search-input')) {
         e.preventDefault();
@@ -974,10 +1080,14 @@
       if (e.key === 'Escape') {
         const modal = document.getElementById('player-modal');
         const confirmMod = document.getElementById('confirm-modal');
+        const settingsMod = document.getElementById('settings-modal');
+        
         if (modal && modal.classList.contains('modal-active')) {
           closeModal();
         } else if (confirmMod && !confirmMod.classList.contains('opacity-0')) {
           closeConfirmModal();
+        } else if (settingsMod && !settingsMod.classList.contains('opacity-0')) {
+          closeSettings();
         }
       }
     });
@@ -1012,6 +1122,9 @@
             <div class="flex items-center gap-2">
                 <button onclick="toggleListsSection()" class="p-2 sm:p-2.5 rounded-xl bg-gray-100 dark:bg-zinc-900 hover:bg-gray-200 dark:hover:bg-zinc-800 border border-gray-200 dark:border-zinc-800 text-gray-700 dark:text-zinc-300 transition-all active:scale-95" title="Watchlist & Favorites">
                     <svg class="w-4 h-4 sm:w-5 sm:h-5 text-fuchsia-500" fill="currentColor" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+                </button>
+                <button onclick="openSettings()" class="p-2 sm:p-2.5 rounded-xl bg-gray-100 dark:bg-zinc-900 hover:bg-gray-200 dark:hover:bg-zinc-800 border border-gray-200 dark:border-zinc-800 text-gray-700 dark:text-zinc-300 transition-all active:scale-95" title="Settings">
+                    <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                 </button>
                 <button onclick="toggleTheme()" class="p-2 sm:p-2.5 rounded-xl bg-gray-100 dark:bg-zinc-900 hover:bg-gray-200 dark:hover:bg-zinc-800 border border-gray-200 dark:border-zinc-800 text-gray-700 dark:text-zinc-300 transition-all active:scale-95" title="Toggle Light/Dark Theme">
                     <svg id="theme-icon-desktop" class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
@@ -1202,6 +1315,67 @@
             <div class="flex gap-3">
                 <button onclick="closeConfirmModal()" class="flex-1 py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-white font-bold text-xs transition-colors">Cancel</button>
                 <button onclick="executeClearList()" class="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold text-xs transition-colors">Confirm Clear</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings / Custom Providers Modal -->
+    <div id="settings-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 opacity-0 pointer-events-none transition-opacity duration-300">
+        <div id="settings-content" class="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-2xl max-w-lg w-full max-h-[90vh] flex flex-col transform scale-95 transition-transform duration-300 shadow-2xl">
+            
+            <div class="p-4 border-b border-gray-200 dark:border-zinc-800 flex items-center justify-between">
+                <h3 class="text-lg font-black text-gray-900 dark:text-white flex items-center gap-2">
+                    <svg class="w-5 h-5 text-fuchsia-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                    Settings & Providers
+                </h3>
+                <button onclick="closeSettings()" class="text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors">✕</button>
+            </div>
+
+            <div class="p-4 sm:p-5 overflow-y-auto space-y-6">
+                
+                <!-- Language Selector -->
+                <div class="space-y-2">
+                    <label class="text-xs font-bold text-gray-700 dark:text-zinc-300">Display & Subtitle Language</label>
+                    <p class="text-[10px] sm:text-xs text-gray-500 dark:text-zinc-500">Changes UI language and requests appropriate subtitles if the video provider supports it.</p>
+                    <select id="settings-lang-select" class="w-full bg-gray-50 dark:bg-zinc-800 border border-gray-300 dark:border-zinc-700 text-gray-900 dark:text-white rounded-lg px-3 py-2.5 text-sm focus:border-fuchsia-500 focus:outline-none">
+                        <option value="en-US">English</option>
+                        <option value="es-ES">Español</option>
+                        <option value="fr-FR">Français</option>
+                        <option value="de-DE">Deutsch</option>
+                        <option value="it-IT">Italiano</option>
+                        <option value="pt-BR">Português (BR)</option>
+                        <option value="hi-IN">Hindi</option>
+                        <option value="ja-JP">日本語 (Japanese)</option>
+                        <option value="ko-KR">한국어 (Korean)</option>
+                    </select>
+                </div>
+
+                <hr class="border-gray-200 dark:border-zinc-800">
+
+                <!-- Custom Providers -->
+                <div class="space-y-3">
+                    <div>
+                        <label class="text-xs font-bold text-gray-700 dark:text-zinc-300">Custom Video Providers</label>
+                        <p class="text-[10px] sm:text-xs text-gray-500 dark:text-zinc-500 mt-1">Add your own HTTP streaming server URLs. Use <code class="bg-gray-200 dark:bg-zinc-800 px-1 rounded">{id}</code> for TMDB ID, <code class="bg-gray-200 dark:bg-zinc-800 px-1 rounded">{s}</code> for season, <code class="bg-gray-200 dark:bg-zinc-800 px-1 rounded">{e}</code> for episode, and <code class="bg-gray-200 dark:bg-zinc-800 px-1 rounded">{lang}</code> for language code.</p>
+                    </div>
+
+                    <div id="custom-providers-list" class="space-y-2 max-h-32 overflow-y-auto">
+                        <!-- Custom Providers injected here -->
+                    </div>
+
+                    <div class="bg-gray-50 dark:bg-zinc-950 p-3 sm:p-4 rounded-xl border border-gray-200 dark:border-zinc-800 space-y-3">
+                        <input id="new-provider-name" type="text" placeholder="Provider Name (e.g., My Server)" class="w-full bg-white dark:bg-zinc-900 border border-gray-300 dark:border-zinc-700 text-gray-900 dark:text-white rounded-lg px-3 py-2 text-xs focus:border-fuchsia-500 focus:outline-none">
+                        <input id="new-provider-movie" type="text" placeholder="Movie URL (e.g., https://api.com/movie/{id}?lang={lang})" class="w-full bg-white dark:bg-zinc-900 border border-gray-300 dark:border-zinc-700 text-gray-900 dark:text-white rounded-lg px-3 py-2 text-xs focus:border-fuchsia-500 focus:outline-none">
+                        <input id="new-provider-tv" type="text" placeholder="TV URL (e.g., https://api.com/tv/{id}/{s}/{e})" class="w-full bg-white dark:bg-zinc-900 border border-gray-300 dark:border-zinc-700 text-gray-900 dark:text-white rounded-lg px-3 py-2 text-xs focus:border-fuchsia-500 focus:outline-none">
+                        <button onclick="addCustomProvider()" class="w-full py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-white font-bold text-xs transition-colors border border-zinc-700">Add Provider</button>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="p-4 border-t border-gray-200 dark:border-zinc-800 flex justify-end gap-3">
+                <button onclick="closeSettings()" class="px-5 py-2 rounded-xl bg-gray-100 dark:bg-zinc-800 hover:bg-gray-200 dark:hover:bg-zinc-700 text-gray-900 dark:text-white font-bold text-sm transition-colors">Cancel</button>
+                <button onclick="saveSettings()" class="px-5 py-2 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:opacity-90 text-white font-bold text-sm transition-all shadow-lg active:scale-95">Save & Reload</button>
             </div>
         </div>
     </div>
