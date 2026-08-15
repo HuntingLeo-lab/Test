@@ -114,8 +114,9 @@
 
     // User Settings State
     let preferredLanguage = localStorage.getItem('streamflix_lang') || 'en-US';
+    let isAdultAllowed = localStorage.getItem('streamflix_adult') === 'true'; // Default to false (Safe mode)
     let customProviders = JSON.parse(localStorage.getItem('streamflix_providers')) || [];
-    let ALL_SERVERS = [...DEFAULT_SERVERS]; // Will be updated by loadProviders()
+    let ALL_SERVERS = [...DEFAULT_SERVERS]; 
 
     let watchlist = JSON.parse(localStorage.getItem('streamflix_watchlist')) || [];
     let favorites = JSON.parse(localStorage.getItem('streamflix_favorites')) || [];
@@ -124,6 +125,7 @@
 
     document.addEventListener('DOMContentLoaded', () => {
       loadProviders();
+      updateAdultToggleUI();
       init();
       updateThemeUI();
       adjustMainPadding();
@@ -132,7 +134,6 @@
     });
 
     function loadProviders() {
-        // Convert custom templates into functional provider objects
         const customObjects = customProviders.map(p => ({
             name: `🌟 ${p.name}`,
             isCustom: true,
@@ -164,7 +165,8 @@
             release_date: "2024-07-24",
             runtime: 128,
             genres: [{name: "Action"}, {name: "Comedy"}],
-            status: "Released"
+            status: "Released",
+            adult: false
         };
         const mockTv = {
             id: 94997,
@@ -178,7 +180,8 @@
             first_air_date: "2022-08-21",
             seasons: [{ season_number: 1, name: "Season 1" }, { season_number: 2, name: "Season 2" }],
             genres: [{name: "Sci-Fi & Fantasy"}, {name: "Drama"}],
-            status: "Returning Series"
+            status: "Returning Series",
+            adult: false
         };
 
         if (endpoint.includes('/tv/') && endpoint.includes('/season/')) {
@@ -189,7 +192,6 @@
              return mockMovie;
         }
 
-        // Return a list of results for discover, trending, search, top_rated
         return {
             results: Array(20).fill(0).map((_, i) => {
                 const isMovie = i % 2 === 0;
@@ -200,7 +202,6 @@
 
     async function fetchAPI(endpoint, extraParams = '') {
         try {
-            // Append the preferred language to TMDB calls so UI gets localized
             const langParam = `&language=${preferredLanguage}`;
             const params = extraParams ? (extraParams.startsWith('&') ? extraParams : `&${extraParams}`) : '';
             const url = `${TMDB_BASE_URL}${endpoint}?api_key=${TMDB_API_KEY}${langParam}${params}`;
@@ -216,7 +217,6 @@
             return await response.json();
         } catch (error) {
             console.error('Error fetching data from TMDB:', error);
-            // Gracefully fallback to mock data on network errors
             return getMockData(endpoint);
         }
     }
@@ -240,7 +240,12 @@
         if(p2 && p2.results) allResults.push(...p2.results);
         if(p3 && p3.results) allResults.push(...p3.results);
 
-        const validResults = allResults.filter(item => item.backdrop_path && item.poster_path);
+        let validResults = allResults.filter(item => item.backdrop_path && item.poster_path);
+        
+        // Filter out 18+ adult content if disabled
+        if (!isAdultAllowed) {
+            validResults = validResults.filter(item => !item.adult);
+        }
 
         if(validResults.length > 0) {
             renderHero(validResults[0]);
@@ -288,6 +293,45 @@
       if (desktopIcon) desktopIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="${iconPath}"/>`;
       if (mobileIcon) mobileIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="${iconPath}"/>`;
     }
+
+    function updateAdultToggleUI() {
+        const btn = document.getElementById('adult-toggle-btn');
+        const slash = document.getElementById('adult-slash');
+        if (!btn) return;
+
+        if (isAdultAllowed) {
+            btn.className = "relative p-1.5 sm:p-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/50 text-red-500 transition-all active:scale-95 flex items-center justify-center font-black text-[10px] sm:text-xs min-w-[36px] sm:min-w-[40px] overflow-hidden";
+            btn.title = "18+ Content: ALLOWED";
+            if(slash) slash.style.display = 'none';
+        } else {
+            btn.className = "relative p-1.5 sm:p-2 rounded-xl bg-gray-100 dark:bg-zinc-900 hover:bg-gray-200 dark:hover:bg-zinc-800 border border-gray-200 dark:border-zinc-800 text-gray-400 dark:text-zinc-500 transition-all active:scale-95 flex items-center justify-center font-black text-[10px] sm:text-xs min-w-[36px] sm:min-w-[40px] overflow-hidden";
+            btn.title = "18+ Content: HIDDEN";
+            if(slash) slash.style.display = 'flex';
+        }
+    }
+
+    window.toggleAdultFilter = function() {
+        isAdultAllowed = !isAdultAllowed;
+        localStorage.setItem('streamflix_adult', isAdultAllowed);
+        updateAdultToggleUI();
+        showToast(isAdultAllowed ? "18+ Content is now visible" : "18+ Content is hidden");
+        
+        // Reload current view
+        const searchInput = document.getElementById('search-input');
+        if (!document.getElementById('search-section').classList.contains('hidden') && searchInput && searchInput.value) {
+            handleSearch({target: {value: searchInput.value}});
+        } else if (!document.getElementById('home-section').classList.contains('hidden')) {
+            const activeGenre = document.querySelector('.genre-pill.active');
+            if (activeGenre) {
+                const onclickStr = activeGenre.getAttribute('onclick');
+                const match = onclickStr.match(/filterByGenre\(([^,]+)/);
+                if (match) {
+                    let genreId = match[1].replace(/['"]/g, '');
+                    filterByGenre(genreId, activeGenre);
+                } else { init(); }
+            } else { init(); }
+        }
+    };
 
     window.resetView = function resetView() {
       const homeSec = document.getElementById('home-section');
@@ -447,7 +491,8 @@
               const label = btnElement ? btnElement.innerText : 'Genre';
               if (gridTitle) gridTitle.textContent = `Best ${label} ${type === 'movie' ? 'Movies' : 'TV Shows'}`;
 
-              const extraParams = `&with_genres=${genreId}&sort_by=popularity.desc&vote_count.gte=300`;
+              // Include adult boolean dynamically to TMDB Discover API
+              const extraParams = `&with_genres=${genreId}&sort_by=popularity.desc&vote_count.gte=300&include_adult=${isAdultAllowed}`;
 
               const [p1, p2, p3] = await Promise.all([
                   fetchAPI(`/discover/${type}`, extraParams + '&page=1'),
@@ -459,7 +504,10 @@
               if(p3 && p3.results) allResults.push(...p3.results);
           }
 
-          const validResults = allResults.filter(item => item.backdrop_path && item.poster_path);
+          let validResults = allResults.filter(item => item.backdrop_path && item.poster_path);
+          if (!isAdultAllowed) {
+              validResults = validResults.filter(item => !item.adult);
+          }
 
           if (validResults.length > 0) {
               renderHero(validResults[0]);
@@ -490,10 +538,11 @@
             if (searchDesc) searchDesc.textContent = `Showing deep search results for "${query}"`;
 
             showLoader();
+            // Instruct API to handle inclusion of adult content
             const [p1, p2, p3] = await Promise.all([
-                fetchAPI(`/search/multi`, `&query=${encodeURIComponent(query)}&page=1`),
-                fetchAPI(`/search/multi`, `&query=${encodeURIComponent(query)}&page=2`),
-                fetchAPI(`/search/multi`, `&query=${encodeURIComponent(query)}&page=3`)
+                fetchAPI(`/search/multi`, `&query=${encodeURIComponent(query)}&include_adult=${isAdultAllowed}&page=1`),
+                fetchAPI(`/search/multi`, `&query=${encodeURIComponent(query)}&include_adult=${isAdultAllowed}&page=2`),
+                fetchAPI(`/search/multi`, `&query=${encodeURIComponent(query)}&include_adult=${isAdultAllowed}&page=3`)
             ]);
             hideLoader();
 
@@ -502,7 +551,10 @@
             if(p2 && p2.results) allResults.push(...p2.results);
             if(p3 && p3.results) allResults.push(...p3.results);
 
-            const media = allResults.filter(i => i.media_type !== 'person' && i.poster_path);
+            let media = allResults.filter(i => i.media_type !== 'person' && i.poster_path);
+            if (!isAdultAllowed) {
+                media = media.filter(i => !i.adult);
+            }
             renderGrid('search-grid', media);
         }, 500);
       } else if (query.trim().length === 0) {
@@ -550,9 +602,8 @@
       updateModalButtonsUI();
 
       let targetSeason = 1;
-            if (resumeData && resumeData.id === id) {
+      if (resumeData && resumeData.id === id) {
           currentServerIndex = resumeData.serverIndex || 0;
-          // Ensure we don't exceed boundaries if custom servers changed
           if (currentServerIndex >= ALL_SERVERS.length) currentServerIndex = 0;
 
           if (type === 'tv') {
@@ -626,7 +677,7 @@
         let attempts = 0;
         const maxAttempts = ALL_SERVERS.length;
         let finalUrl = '';
-        const shortLang = preferredLanguage.split('-')[0]; // e.g., 'en', 'es', 'fr'
+        const shortLang = preferredLanguage.split('-')[0];
 
         while (!serverFound && attempts < maxAttempts) {
             const server = ALL_SERVERS[currentServerIndex];
@@ -670,7 +721,6 @@
                 if (iframe) {
                     iframe.src = finalUrl;
                     
-                    // Show iframe when loaded, or force show after delay if cross-origin blocks onload
                     iframe.onload = () => {
                         if (loader) loader.style.display = 'none';
                         iframe.style.display = 'block';
@@ -707,48 +757,31 @@
             showToast("No active media to open.");
             return;
         }
-
         const isAndroid = /Android/i.test(navigator.userAgent);
-
         if (isAndroid) {
             const urlWithoutProtocol = currentUrl.replace(/^https?:\/\//, '');
             const intentUrl = `intent://${urlWithoutProtocol}#Intent;scheme=https;action=android.intent.action.VIEW;end;`;
             window.location.href = intentUrl;
-        } else {
-            window.open(currentUrl, '_blank');
-        }
+        } else { window.open(currentUrl, '_blank'); }
     };
 
     window.toggleFullscreen = function() {
         const wrapper = document.getElementById('player-wrapper');
         if (!wrapper) return;
         if (!document.fullscreenElement && !document.mozFullScreenElement && !document.webkitFullscreenElement && !document.msFullscreenElement) {
-            if (wrapper.requestFullscreen) {
-                wrapper.requestFullscreen().catch(err => console.log("Error attempting to enable fullscreen:", err));
-            } else if (wrapper.webkitRequestFullscreen) {
-                wrapper.webkitRequestFullscreen();
-            } else if (wrapper.mozRequestFullScreen) {
-                wrapper.mozRequestFullScreen();
-            } else if (wrapper.msRequestFullscreen) {
-                wrapper.msRequestFullscreen();
-            }
+            if (wrapper.requestFullscreen) wrapper.requestFullscreen().catch(err => console.log(err));
+            else if (wrapper.webkitRequestFullscreen) wrapper.webkitRequestFullscreen();
+            else if (wrapper.mozRequestFullScreen) wrapper.mozRequestFullScreen();
+            else if (wrapper.msRequestFullscreen) wrapper.msRequestFullscreen();
         } else {
-            if (document.exitFullscreen) {
-                document.exitFullscreen();
-            } else if (document.webkitExitFullscreen) {
-                document.webkitExitFullscreen();
-            } else if (document.mozCancelFullScreen) {
-                document.mozCancelFullScreen();
-            } else if (document.msExitFullscreen) {
-                document.msExitFullscreen();
-            }
+            if (document.exitFullscreen) document.exitFullscreen();
+            else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+            else if (document.mozCancelFullScreen) document.mozCancelFullScreen();
+            else if (document.msExitFullscreen) document.msExitFullscreen();
         }
     };
 
-    window.reloadStream = function reloadStream() {
-        setVideoSource();
-    };
-
+    window.reloadStream = function reloadStream() { setVideoSource(); };
     window.nextServer = function nextServer() {
         currentServerIndex = (currentServerIndex + 1) % ALL_SERVERS.length;
         setVideoSource();
@@ -893,7 +926,6 @@
         if(!currentModalItem) return;
         const inWatchlist = watchlist.some(i => i.id === currentModalItem.id);
         const inFavs = favorites.some(i => i.id === currentModalItem.id);
-
         const btnWatchlist = document.getElementById('btn-icon-watchlist');
         const btnFav = document.getElementById('btn-icon-favorite');
 
@@ -936,7 +968,6 @@
             container.classList.add('hidden');
             return;
         }
-
         track.innerHTML = '';
 
         continueList.forEach((item) => {
@@ -952,16 +983,13 @@
             card.innerHTML = `
                 <div class="absolute inset-0 bg-cover bg-center opacity-10 dark:opacity-20 transition-transform duration-700 group-hover:scale-110" style="background-image: url('${bgImg}')"></div>
                 <div class="absolute inset-0 bg-gradient-to-r from-white/90 via-white/80 to-white/60 dark:from-zinc-900 dark:via-zinc-900/90 dark:to-zinc-900/70"></div>
-
                 <div class="relative z-10 w-12 h-16 sm:w-14 sm:h-20 bg-gray-200 dark:bg-zinc-800 rounded shadow-md shrink-0 overflow-hidden">
                     <img src="${bgImg}" class="w-full h-full object-cover">
                 </div>
-
                 <div class="relative z-10 flex-1 min-w-0 py-1">
                     <h3 class="text-xs sm:text-sm font-black text-gray-900 dark:text-white truncate pr-2 group-hover:text-fuchsia-600 dark:group-hover:text-fuchsia-400 transition-colors">${item.title}</h3>
                     <p class="text-[10px] sm:text-xs font-bold text-gray-500 dark:text-zinc-400 mt-0.5 truncate">${subtitle}</p>
                 </div>
-
                 <div class="relative z-10 shrink-0 flex items-center gap-2">
                     <button onclick="clearContinueWatching(event, ${item.id})" class="p-2 sm:p-2.5 rounded-full bg-white/50 dark:bg-zinc-800/50 hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-900/30 dark:hover:text-red-400 text-gray-500 dark:text-zinc-400 transition-colors active:scale-90" title="Remove">
                         <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
@@ -973,7 +1001,6 @@
             `;
             track.appendChild(card);
         });
-
         container.classList.remove('hidden');
     };
 
@@ -987,10 +1014,8 @@
     window.openSettings = function() {
         const modal = document.getElementById('settings-modal');
         const langSelect = document.getElementById('settings-lang-select');
-        
         if(langSelect) langSelect.value = preferredLanguage;
         renderCustomProvidersList();
-
         if (modal) {
             modal.classList.remove('opacity-0', 'pointer-events-none');
             setTimeout(() => document.getElementById('settings-content').classList.remove('scale-95'), 10);
@@ -1010,11 +1035,8 @@
             preferredLanguage = langSelect.value;
             localStorage.setItem('streamflix_lang', preferredLanguage);
             showToast("Language saved! Refreshing content...");
-            // Reload UI to fetch localized titles
             setTimeout(() => location.reload(), 1000);
-        } else {
-            closeSettings();
-        }
+        } else { closeSettings(); }
     };
 
     window.addCustomProvider = function() {
@@ -1022,15 +1044,8 @@
         const mUrl = document.getElementById('new-provider-movie').value.trim();
         const tUrl = document.getElementById('new-provider-tv').value.trim();
 
-        if(!name || !mUrl || !tUrl) {
-            showToast("Please fill all provider fields.");
-            return;
-        }
-
-        if(!mUrl.includes('{id}') || !tUrl.includes('{id}')) {
-            showToast("URLs must include {id}");
-            return;
-        }
+        if(!name || !mUrl || !tUrl) { showToast("Please fill all provider fields."); return; }
+        if(!mUrl.includes('{id}') || !tUrl.includes('{id}')) { showToast("URLs must include {id}"); return; }
 
         customProviders.push({ name, movieTemplate: mUrl, tvTemplate: tUrl });
         localStorage.setItem('streamflix_providers', JSON.stringify(customProviders));
@@ -1039,7 +1054,7 @@
         document.getElementById('new-provider-movie').value = '';
         document.getElementById('new-provider-tv').value = '';
         
-        loadProviders(); // Refresh servers array
+        loadProviders(); 
         renderCustomProvidersList();
         showToast("Provider added successfully!");
     };
@@ -1054,12 +1069,10 @@
     function renderCustomProvidersList() {
         const container = document.getElementById('custom-providers-list');
         if (!container) return;
-        
         if (customProviders.length === 0) {
             container.innerHTML = `<p class="text-xs text-zinc-500 italic py-2">No custom providers added yet.</p>`;
             return;
         }
-
         container.innerHTML = customProviders.map((p, i) => `
             <div class="flex items-center justify-between bg-zinc-100 dark:bg-zinc-800 p-2.5 rounded-lg border border-gray-200 dark:border-zinc-700">
                 <div class="min-w-0 pr-2">
@@ -1081,27 +1094,22 @@
         const modal = document.getElementById('player-modal');
         const confirmMod = document.getElementById('confirm-modal');
         const settingsMod = document.getElementById('settings-modal');
-        
-        if (modal && modal.classList.contains('modal-active')) {
-          closeModal();
-        } else if (confirmMod && !confirmMod.classList.contains('opacity-0')) {
-          closeConfirmModal();
-        } else if (settingsMod && !settingsMod.classList.contains('opacity-0')) {
-          closeSettings();
-        }
+        if (modal && modal.classList.contains('modal-active')) closeModal();
+        else if (confirmMod && !confirmMod.classList.contains('opacity-0')) closeConfirmModal();
+        else if (settingsMod && !settingsMod.classList.contains('opacity-0')) closeSettings();
       }
     });
     </script>
 
     <nav class="fixed top-0 left-0 right-0 z-40 border-b border-gray-200 dark:border-zinc-800/80 glass-panel transition-all">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-2 sm:gap-4">
             
             <!-- Logo / Brand -->
             <div onclick="resetView()" class="flex items-center gap-2 cursor-pointer group shrink-0">
                 <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-tr from-violet-600 via-fuchsia-600 to-pink-500 flex items-center justify-center text-white shadow-lg shadow-fuchsia-500/20 group-hover:scale-105 transition-transform">
                     <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8 12.5v-9l6 4.5-6 4.5z"/></svg>
                 </div>
-                <span class="text-lg sm:text-xl font-black bg-gradient-to-r from-gray-900 via-zinc-800 to-gray-900 dark:from-white dark:via-zinc-200 dark:to-zinc-400 bg-clip-text text-transparent tracking-tight">Broadway<span class="text-fuchsia-600 dark:text-fuchsia-400">4U</span></span>
+                <span class="hidden xs:inline text-lg sm:text-xl font-black bg-gradient-to-r from-gray-900 via-zinc-800 to-gray-900 dark:from-white dark:via-zinc-200 dark:to-zinc-400 bg-clip-text text-transparent tracking-tight">Broadway<span class="text-fuchsia-600 dark:text-fuchsia-400">4U</span></span>
             </div>
 
             <!-- Media Toggles Desktop -->
@@ -1119,7 +1127,14 @@
             </div>
 
             <!-- Right Controls -->
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-1.5 sm:gap-2">
+                <!-- NEW 18+ Toggle -->
+                <button id="adult-toggle-btn" onclick="toggleAdultFilter()" class="relative p-1.5 sm:p-2 rounded-xl bg-gray-100 dark:bg-zinc-900 hover:bg-gray-200 dark:hover:bg-zinc-800 border border-gray-200 dark:border-zinc-800 text-gray-400 dark:text-zinc-500 transition-all active:scale-95 flex items-center justify-center font-black text-[10px] sm:text-xs min-w-[36px] sm:min-w-[40px] overflow-hidden" title="Toggle 18+ Content">
+                    <span>18+</span>
+                    <div id="adult-slash" class="absolute inset-0 flex items-center justify-center pointer-events-none">
+                        <div class="w-[120%] h-[2px] bg-current rotate-45"></div>
+                    </div>
+                </button>
                 <button onclick="toggleListsSection()" class="p-2 sm:p-2.5 rounded-xl bg-gray-100 dark:bg-zinc-900 hover:bg-gray-200 dark:hover:bg-zinc-800 border border-gray-200 dark:border-zinc-800 text-gray-700 dark:text-zinc-300 transition-all active:scale-95" title="Watchlist & Favorites">
                     <svg class="w-4 h-4 sm:w-5 sm:h-5 text-fuchsia-500" fill="currentColor" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
                 </button>
@@ -1140,7 +1155,6 @@
         </div>
     </nav>
 
-    <!-- Main Container -->
     <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pb-16 transition-all">
 
         <!-- Continue Watching Bar -->
@@ -1239,7 +1253,6 @@
     <div id="player-modal" class="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-0 sm:p-4 opacity-0 pointer-events-none transition-opacity duration-300">
         <div id="player-wrapper" class="w-full h-full sm:max-w-5xl sm:h-auto max-h-screen bg-gray-900 sm:rounded-2xl overflow-hidden shadow-2xl flex flex-col border border-zinc-800">
             
-            <!-- Video Container Header Bar -->
             <div class="p-3 bg-zinc-950 flex items-center justify-between border-b border-zinc-800 text-xs sm:text-sm">
                 <div class="flex items-center gap-2 min-w-0">
                     <span id="modal-type-badge" class="bg-fuchsia-600 text-white text-[9px] font-black px-2 py-0.5 rounded uppercase shrink-0">movie</span>
@@ -1254,18 +1267,15 @@
                 </div>
             </div>
 
-            <!-- Iframe & Loading Viewport -->
         <div class="relative w-full aspect-video bg-zinc-950 flex flex-col items-center justify-center overflow-hidden">
             <div id="iframe-loader" class="absolute inset-0 z-10 bg-zinc-950 flex flex-col items-center justify-center gap-3">
                 <div class="w-10 h-10 border-4 border-fuchsia-600 border-t-transparent rounded-full animate-spin"></div>
                 <span class="text-xs font-bold text-zinc-400 pulse-glow">Finding reliable server...</span>
             </div>
             
-            <!-- Embedded Player -->
             <iframe id="player-iframe" class="hidden absolute inset-0 w-full h-full z-20 border-0" allowfullscreen allow="autoplay; encrypted-media; fullscreen"></iframe>
         </div>
 
-        <!-- Bottom Information & TV Controls -->
             <div class="p-4 bg-zinc-900 overflow-y-auto max-h-[30vh] sm:max-h-[35vh] space-y-4">
                 
                 <div class="flex items-start justify-between gap-4">
@@ -1286,24 +1296,19 @@
                 </div>
 
                 <div id="modal-extra-info" class="text-[11px] sm:text-xs text-zinc-400 grid grid-cols-2 sm:grid-cols-3 gap-2 border-t border-zinc-800 pt-3">
-                    <!-- Additional Metadata -->
                 </div>
 
-                <!-- TV Series Season/Episode Selector Container -->
                 <div id="tv-controls" class="hidden border-t border-zinc-800 pt-3 space-y-3">
                     <div class="flex items-center justify-between">
                         <h4 class="text-xs font-bold text-white uppercase tracking-wider">Episodes</h4>
                         <select id="season-select" onchange="handleSeasonChange(this.value)" class="bg-zinc-800 border border-zinc-700 text-white text-xs font-bold rounded-lg px-3 py-1.5 focus:outline-none focus:border-fuchsia-500">
-                            <!-- Season Options -->
                         </select>
                     </div>
                     <div id="episodes-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 max-h-48 overflow-y-auto pr-1">
-                        <!-- Episode cards dynamically populated -->
                     </div>
                 </div>
 
             </div>
-
         </div>
     </div>
 
@@ -1333,7 +1338,6 @@
 
             <div class="p-4 sm:p-5 overflow-y-auto space-y-6">
                 
-                <!-- Language Selector -->
                 <div class="space-y-2">
                     <label class="text-xs font-bold text-gray-700 dark:text-zinc-300">Display & Subtitle Language</label>
                     <p class="text-[10px] sm:text-xs text-gray-500 dark:text-zinc-500">Changes UI language and requests appropriate subtitles if the video provider supports it.</p>
@@ -1352,7 +1356,6 @@
 
                 <hr class="border-gray-200 dark:border-zinc-800">
 
-                <!-- Custom Providers -->
                 <div class="space-y-3">
                     <div>
                         <label class="text-xs font-bold text-gray-700 dark:text-zinc-300">Custom Video Providers</label>
@@ -1360,7 +1363,6 @@
                     </div>
 
                     <div id="custom-providers-list" class="space-y-2 max-h-32 overflow-y-auto">
-                        <!-- Custom Providers injected here -->
                     </div>
 
                     <div class="bg-gray-50 dark:bg-zinc-950 p-3 sm:p-4 rounded-xl border border-gray-200 dark:border-zinc-800 space-y-3">
